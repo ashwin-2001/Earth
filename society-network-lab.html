@@ -1,0 +1,2179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adaptive Society Network Lab</title>
+<meta name="description" content="Agent-based adaptive network simulator: pressure-driven resource flow, preferential and fitness attachment, labour matching, migration, turbulence, cascades, anomaly detection and parameter sweeps. Single file, no dependencies.">
+<style>
+:root{
+  --bg:#070a12; --panel:rgba(11,15,25,0.9); --panel-solid:#0b0f19; --line:rgba(255,255,255,0.07); --line2:rgba(255,255,255,0.14);
+  --ink:#e8edf5; --ink2:#a9b3c4; --muted:#6f7a8c;
+  --cyan:#22d3ee; --amber:#fab219; --magenta:#e879f9; --red:#ff4d4d; --green:#34d058; --violet:#b18cff;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:12px/1.4 var(--sans);overflow:hidden}
+#view{position:fixed;inset:0;display:block;touch-action:none;cursor:crosshair}
+button{background:#121a2a;color:var(--ink);border:1px solid var(--line2);border-radius:5px;padding:4px 9px;font:12px var(--sans);cursor:pointer;white-space:nowrap}
+button:hover{border-color:var(--cyan)} button:active{transform:translateY(1px)}
+button.on{background:#0c3440;border-color:var(--cyan);color:#fff}
+button.primary{background:#0c3a47;border-color:#1b98ad}
+button.warn{border-color:#7a2f2f} button.warn:hover{border-color:var(--red)}
+input[type=range]{width:100%;accent-color:var(--cyan);height:14px;margin:0}
+input[type=number],input[type=text],select{background:#080c15;color:var(--ink);border:1px solid var(--line2);border-radius:4px;padding:2px 5px;font:11px var(--mono);width:100%;min-width:0}
+select{font-family:var(--sans)}
+input[type=checkbox]{accent-color:var(--cyan);margin:0 5px 0 0;vertical-align:-2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+/* top bar */
+#top{position:fixed;top:0;left:0;right:0;height:42px;display:flex;align-items:center;gap:10px;padding:0 10px;background:rgba(6,9,16,.92);border-bottom:1px solid var(--line);z-index:6;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+#top::-webkit-scrollbar{display:none}
+.brand{font-weight:650;letter-spacing:.01em;white-space:nowrap}
+.brand span{color:var(--cyan)}
+.stat{font:11px var(--mono);color:var(--muted);white-space:nowrap}
+.stat b{color:var(--ink);font-weight:500}
+.badge{padding:2px 8px;border-radius:10px;font:600 10px var(--mono);letter-spacing:.06em;border:1px solid;white-space:nowrap;cursor:help}
+.ph-STABLE{color:#2dd4bf;border-color:#2dd4bf66;background:#2dd4bf12}
+.ph-CONGESTED{color:#fab219;border-color:#fab21966;background:#fab21912}
+.ph-TURBULENT{color:#ff6b6b;border-color:#ff6b6b66;background:#ff6b6b12}
+.ph-FRAGMENTED{color:#9fb3cc;border-color:#9fb3cc66;background:#9fb3cc12}
+.ph-MONOPOLIZED{color:#e879f9;border-color:#e879f966;background:#e879f912}
+.grow{flex:1}
+.dd{position:relative}
+.menu{position:fixed;background:var(--panel-solid);border:1px solid var(--line2);border-radius:6px;padding:4px;display:none;z-index:40;min-width:220px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.menu.open{display:block}
+.menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:6px 10px}
+.menu button:hover{background:#15203a}
+/* panels */
+.panel{position:fixed;background:var(--panel);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:8px;z-index:4;overflow:auto;scrollbar-width:thin;scrollbar-color:#2a3345 transparent}
+#left{top:50px;left:8px;bottom:170px;width:300px}
+#right{top:50px;right:8px;bottom:170px;width:340px;display:flex;flex-direction:column;overflow:hidden}
+#bottom{left:8px;right:8px;bottom:8px;height:154px;display:flex;gap:10px;padding:8px;overflow:hidden}
+.hidden{display:none!important}
+.sec{border-bottom:1px solid var(--line)}
+.sec>h3{margin:0;padding:8px 10px;font:600 10.5px var(--sans);text-transform:uppercase;letter-spacing:.09em;color:var(--ink2);cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.sec>h3::after{content:'−';color:var(--muted);font-size:13px}
+.sec.closed>h3::after{content:'+'}
+.sec.closed>.body{display:none}
+.sec .body{padding:2px 0 8px}
+.row{display:grid;grid-template-columns:118px 1fr 50px;align-items:center;gap:6px;padding:2px 10px}
+.row label{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:help}
+.row label.init::after{content:' ⟲';color:var(--amber)}
+.row.changed label{color:#fff}
+.row input[type=number]{padding:1px 3px;text-align:right}
+.btnrow{display:flex;flex-wrap:wrap;gap:4px;padding:4px 10px}
+.opt{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:6px;padding:2px 10px}
+.opt label{color:var(--ink2)}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;padding:4px 10px;color:var(--ink2)}
+.legend{padding:4px 10px 2px;display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;font-size:10.5px;color:var(--ink2)}
+.sw{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.hint{padding:2px 10px 6px;color:var(--muted);font-size:10.5px}
+/* right tabs */
+.tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
+.tabs button{flex:1;border:0;border-radius:0;background:transparent;border-bottom:2px solid transparent;color:var(--ink2);padding:8px 4px}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--cyan);background:transparent}
+.tabs .cnt{font:10px var(--mono);color:var(--magenta);margin-left:3px}
+.pane{flex:1;overflow:auto;scrollbar-width:thin;scrollbar-color:#2a3345 transparent}
+table.kv{width:100%;border-collapse:collapse;font:11px var(--mono)}
+.kv td{padding:2.5px 10px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:top}
+.kv td:first-child{color:var(--ink2);font-family:var(--sans);cursor:help}
+.kv td:last-child{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.kv tr.grp td{color:var(--muted);text-transform:uppercase;font:600 10px var(--sans);letter-spacing:.09em;padding-top:12px;border-bottom:1px solid var(--line);cursor:default}
+table.grid{width:100%;border-collapse:collapse;font:10.5px var(--mono)}
+.grid th{color:var(--muted);font:600 9.5px var(--sans);text-transform:uppercase;letter-spacing:.06em;text-align:right;padding:3px 6px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel-solid)}
+.grid th:first-child,.grid td:first-child{text-align:left}
+.grid td{padding:2px 6px;text-align:right;border-bottom:1px solid rgba(255,255,255,.03);font-variant-numeric:tabular-nums;white-space:nowrap}
+.linkish{cursor:pointer;color:#8fd8ea} .linkish:hover{text-decoration:underline}
+.log-tools{display:flex;gap:4px;padding:6px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel-solid)}
+.log-item{padding:6px 10px;border-bottom:1px solid var(--line);font-size:11px}
+.log-item .hd{display:flex;gap:6px;align-items:center;font:10.5px var(--mono);color:var(--muted)}
+.log-item .note{margin-top:2px;color:var(--ink)}
+.k{font:600 9px var(--mono);padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em}
+.k-anomaly{background:#e879f922;color:#f0abfc}.k-pattern{background:#22d3ee22;color:#67e8f9}.k-regime{background:#fab21922;color:#fcd34d}
+.k-shock{background:#ff4d4d26;color:#ff9b9b}.k-user{background:#ffffff14;color:#c3c2b7}.k-recovery{background:#34d05822;color:#86efac}
+.diag{padding:7px 10px;border-bottom:1px solid var(--line)}
+.diag .t{display:flex;gap:6px;align-items:baseline}
+.diag .v{font:10.5px var(--mono);color:var(--ink2);margin:2px 0 0 22px}
+.diag .w{font-size:10.5px;color:var(--muted);margin:1px 0 0 22px}
+.st{font:600 10px var(--mono);width:16px;text-align:center;flex:none}
+.st-pass{color:#34d058}.st-weak{color:#fab219}.st-fail{color:#ff6b6b}
+.insp{padding:8px 10px}
+.insp h4{margin:0 0 6px;font-size:13px;display:flex;align-items:center;gap:6px}
+.insp .actions{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.modes{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+/* bottom */
+#sparks{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));grid-auto-rows:44px;gap:5px;overflow:hidden;min-width:0}
+.spark{position:relative;background:rgba(255,255,255,.018);border:1px solid var(--line);border-radius:5px;padding:2px 6px 0}
+.spark .lbl{font-size:10px;color:var(--ink2);display:flex;justify-content:space-between;gap:6px;white-space:nowrap}
+.spark .lbl b{font:500 10px var(--mono);color:var(--ink)}
+.spark canvas{width:100%;height:26px;display:block;cursor:crosshair}
+#scen{width:560px;flex:none;overflow:auto;scrollbar-width:thin}
+.scen-h{font:600 9.5px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 4px;display:flex;justify-content:space-between}
+.scen-row{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.scen-row button{font-size:11px;padding:3px 7px}
+/* tooltip & toast */
+#tip{position:fixed;pointer-events:none;z-index:50;background:rgba(5,8,14,.96);border:1px solid var(--line2);border-radius:6px;padding:7px 9px;font:11px/1.45 var(--mono);color:var(--ink);display:none;max-width:340px;white-space:pre;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+#toast{position:fixed;left:50%;top:52px;transform:translateX(-50%);background:#0c3440;border:1px solid var(--cyan);padding:6px 12px;border-radius:6px;z-index:60;display:none;font-size:12px}
+/* modals */
+.modal{position:fixed;inset:0;background:rgba(2,4,8,.72);z-index:30;display:none;align-items:center;justify-content:center;padding:12px}
+.modal.open{display:flex}
+.modal .box{background:var(--panel-solid);border:1px solid var(--line2);border-radius:10px;width:min(1180px,100%);max-height:94vh;overflow:auto;padding:14px 16px}
+.modal h2{margin:0 0 4px;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+.modal h3{font:600 11px var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:14px 0 6px}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 10px}
+.form label{display:block;color:var(--muted);font-size:10.5px;margin-bottom:2px}
+.metric-checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:3px 10px;color:var(--ink2);font-size:11px}
+.res-wrap{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;margin-top:10px}
+.res-wrap canvas{width:100%;height:320px;background:#080c15;border:1px solid var(--line);border-radius:6px;display:block}
+.table-scroll{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:6px}
+.bar{height:6px;background:#141b2b;border-radius:3px;overflow:hidden;margin:8px 0}
+.bar div{height:100%;background:var(--cyan);width:0}
+.eq{font:11.5px/1.6 var(--mono);color:var(--ink);background:#080c15;border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre-wrap;margin:4px 0}
+.help-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:4px 18px}
+.help-grid p{margin:4px 0;color:var(--ink2)}
+kbd{font:10.5px var(--mono);background:#141b2b;border:1px solid var(--line2);border-radius:3px;padding:0 4px}
+#ddeg{width:100%;height:120px;display:block}
+@media (max-width: 900px){
+  #left,#right{width:auto;left:8px;right:8px;top:50px;bottom:8px;z-index:8}
+  #bottom{height:auto;max-height:46vh;flex-direction:column;overflow:auto}
+  #scen{width:auto}
+  #sparks{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));max-height:98px;flex:none}
+  .res-wrap{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<canvas id="view" aria-label="Network simulation canvas"></canvas>
+
+<div id="top">
+  <div class="brand">Adaptive Society <span>Network Lab</span></div>
+  <button id="bPlay" class="primary" title="Play / pause (Space)">▶ Play</button>
+  <button id="bStep" title="Advance one tick (→ or .)">Step</button>
+  <button id="bReset" title="Rebuild the network from the current parameters and seed (R)">Reset</button>
+  <span class="stat">t <b id="sT">0</b></span>
+  <span class="stat">N <b id="sN">0</b></span>
+  <span class="stat">E <b id="sE">0</b></span>
+  <span class="stat">ticks/s <b id="sTps">0</b></span>
+  <span class="stat">FPS <b id="sFps">0</b></span>
+  <span class="stat">seed <b id="sSeed">0</b></span>
+  <span class="stat">LOD <b id="sLod">0</b></span>
+  <span id="phase" class="badge ph-STABLE">STABLE</span>
+  <span class="grow"></span>
+  <button id="bResearch" title="Parameter sweeps and controlled experiments">Research</button>
+  <button id="bExport">Export ▾</button>
+  <button id="bHelp" title="Model equations and controls (H)">Model &amp; help</button>
+  <button id="tL" class="on" title="Toggle controls panel">Controls</button>
+  <button id="tR" class="on" title="Toggle metrics panel">Metrics</button>
+  <button id="tB" class="on" title="Toggle timeline panel">Timeline</button>
+</div>
+<div class="menu" id="mExport">
+  <button data-x="graph">Graph snapshot (JSON)</button>
+  <button data-x="metrics">Metric time series (CSV)</button>
+  <button data-x="events">Research log (CSV)</button>
+  <button data-x="eventsJson">Research log (JSON)</button>
+  <button data-x="save">Save full simulation state (JSON)</button>
+  <button data-x="load">Load simulation state…</button>
+  <button data-x="share">Copy shareable parameter link</button>
+  <button data-x="png">Canvas snapshot (PNG)</button>
+</div>
+
+<div id="left" class="panel"></div>
+
+<div id="right" class="panel">
+  <div class="tabs" id="tabs">
+    <button data-tab="metrics" class="on">Metrics</button>
+    <button data-tab="log">Log<span class="cnt" id="logCnt"></span></button>
+    <button data-tab="diag">Diagnostics</button>
+    <button data-tab="insp">Inspector</button>
+  </div>
+  <div class="pane" id="pane-metrics"></div>
+  <div class="pane hidden" id="pane-log"></div>
+  <div class="pane hidden" id="pane-diag"></div>
+  <div class="pane hidden" id="pane-insp"></div>
+</div>
+
+<div id="bottom" class="panel">
+  <div id="sparks"></div>
+  <div id="scen"></div>
+</div>
+
+<div id="tip"></div>
+<div id="toast"></div>
+<input type="file" id="fileLoad" accept=".json,application/json" class="hidden">
+
+<div class="modal" id="mResearch"><div class="box">
+  <h2>Research mode — parameter sweeps <button id="rClose">Close</button></h2>
+  <div class="muted">Each run builds a fresh network from the current parameters (plus the swept values), runs headless for the given ticks, and records the mean of each metric over the final 25% of the run. Replicates use seeds seed, seed+1, …</div>
+  <h3>Quick studies</h3>
+  <div class="scen-row" id="rPresets"></div>
+  <h3>Sweep</h3>
+  <div class="form">
+    <div><label>Parameter X</label><select id="rX"></select></div>
+    <div><label>X min</label><input type="number" id="rXmin" step="any"></div>
+    <div><label>X max</label><input type="number" id="rXmax" step="any"></div>
+    <div><label>X steps</label><input type="number" id="rXn" min="2" max="40" value="6"></div>
+    <div><label>Parameter Y (optional)</label><select id="rY"></select></div>
+    <div><label>Y min</label><input type="number" id="rYmin" step="any"></div>
+    <div><label>Y max</label><input type="number" id="rYmax" step="any"></div>
+    <div><label>Y steps</label><input type="number" id="rYn" min="2" max="20" value="4"></div>
+    <div><label>Ticks per run</label><input type="number" id="rTicks" min="20" max="5000" value="300"></div>
+    <div><label>Replicates (seeds)</label><input type="number" id="rReps" min="1" max="10" value="2"></div>
+    <div><label>Initial nodes (override)</label><input type="number" id="rN0" min="50" max="4000" value="400"></div>
+    <div><label>Max nodes (override)</label><input type="number" id="rNmax" min="100" max="6000" value="600"></div>
+  </div>
+  <h3>Metrics to record</h3>
+  <div class="metric-checks" id="rMetrics"></div>
+  <div style="display:flex;gap:6px;margin-top:12px;align-items:center;flex-wrap:wrap">
+    <button id="rRun" class="primary">Run sweep</button><button id="rCancel" class="warn">Cancel</button>
+    <span class="grow"></span>
+    <label class="muted">Chart metric <select id="rShow" style="width:auto"></select></label>
+    <button id="rCsv">Export CSV</button><button id="rJson">Export JSON</button>
+  </div>
+  <div class="bar"><div id="rBar"></div></div>
+  <div class="muted mono" id="rStatus">Idle.</div>
+  <div class="res-wrap">
+    <div><canvas id="rChart"></canvas><div class="muted" id="rChartNote" style="margin-top:4px"></div></div>
+    <div class="table-scroll"><table class="grid" id="rTable"></table></div>
+  </div>
+</div></div>
+
+<div class="modal" id="mHelp"><div class="box">
+  <h2>Model &amp; help <button id="hClose">Close</button></h2>
+  <div class="help-grid">
+    <div>
+      <h3>State</h3>
+      <p>Directed weighted graph G(t) = (V, E, W). Node i: cluster c, fitness η, skill vector s ∈ ℝ⁶, reserve R, pressure P, innovation u, leverage, trust threshold. Edge i→j: weight w, flow F, capacity C, trust, age, type.</p>
+      <h3>Flow (per tick)</h3>
+      <div class="eq">P_i = R_i / cap_i − 0.3·φ·η_eff,i·ln(1 + w_in,i)
+cap_i = 5·(1 + ln(1 + w_in,i + w_out,i))
+F_ij = min( C_ij , λ_i · k·w_ij·max(0, P_i − P_j)/(1 + ν_c) )
+C_ij = capacity·(0.5 + w_ij)      congestion_ij = F_ij / C_ij
+λ_i  = min(1, 0.25·R_i / Σ_out demand)      (cannot send > 25% of reserve)
+Re_i = mean congestion_i · ln(1 + k_i) / ν_c    turbulent if Re_i > Re_c</div>
+      <h3>Resources, states</h3>
+      <div class="eq">dR_i = Σ_in F − Σ_out F + income_i − cost_i
+income_i = wage_c · e_i · (0.5 + 0.5·M_i) · η_eff,i · (1 + noise)
+cost_i   = cost_c·(1 + feedback·congestion_c) + base + 0.003·k_i + δ·R_i
+stressed: R < stress thr.   dormant: R < survival thr. for 15 ticks
+pruned: dormant, isolated, 80 ticks.   hub: w_in > μ + 2.5σ and R > R̄</div>
+      <h3>Labour matching</h3>
+      <div class="eq">M_i = cos(s_i, d_c)          A_i = volume · leverage_i
+q_i = quality / (1 + dilution·ln A_i)       S_i = q_i · M_i
+ρ_c = min(1, |c| / Σ_{i∈c} A_i)             (receptivity; congested by volume)
+H_i = 1 − exp(−2·A_i·S_i·ρ_c)
+e_i = H_i · σ(10·pen·(M_i·(1 + 0.1 ln(1 + w_i)) − thr − automation))</div>
+    </div>
+    <div>
+      <h3>Edge formation (roulette over 8 candidates)</h3>
+      <div class="eq">candidates: 3 global ∝ η_eff·(k+1)^α, 2 in-cluster ∝ same,
+            2 friends-of-friends, 1 uniform
+score_ij = base_j·(1 + β·cos(s_i,s_j))·(1 + θ·CN_ij)·(1 + ε·hole_j)
+           ·(1.5 if same cluster) / (1 + d_ij/120)^γ · (1 + noise)
+attempts_i = rate·A_i·(1 + ½·min(2, R_i/cap_i)) / (1 + k_i/attention)
+accept with ρ_{c_j}·(0.25 + 0.75·S_i);  reciprocate with p_recip</div>
+      <h3>Edge dynamics</h3>
+      <div class="eq">dw = η_w·F·trust − λ·w·m      (m ×4 dormant, ×2 stressed, ×(1−0.8·remote) cross-cluster)
+trust += 0.02(1−trust) on successful flow; −0.03 per overload;
+         − decay·trust; − spam term when A > 2 and S < 0.4
+prune after 20 ticks with w < thr or trust < target threshold</div>
+      <h3>Migration & innovation</h3>
+      <div class="eq">U_i(c) = E[income | c] − cost_c(1 + fb·cong_c) + 0.05·Σ_{j∈c} w·trust − ½·stressed_c·wage_c
+P_move = σ(β_m·(U_i(c') − U_i(c)) − migCost·ν_c)
+du_i = D·Σ w(u_j − u_i)/Σw − λ_u·u_i + κ·u_i(1 − u_i) + S_i</div>
+      <h3>Detection</h3>
+      <p>Every tick: rolling z-score of key metrics over the window; |z| above threshold is logged. Every 10 ticks: regime classifier (stable / congested / turbulent / fragmented / monopolized), rich-club growth, echo chambers, broker capture, spam collapse, monopoly, poverty traps, innovation fronts, cascades and critical slowing down (Kendall trend of lag-1 autocorrelation and variance of detrended total flow). Shocks log recovery at +60 and +200 ticks.</p>
+    </div>
+  </div>
+  <h3>Controls</h3>
+  <div class="help-grid">
+    <p><kbd>Space</kbd> play/pause · <kbd>→</kbd>/<kbd>.</kbd> step · <kbd>R</kbd> reset · <kbd>F</kbd> fit camera · <kbd>[</kbd> <kbd>]</kbd> speed · <kbd>H</kbd> help · <kbd>Esc</kbd> clear selection / cancel mode</p>
+    <p>Drag to pan, wheel/pinch to zoom. Click a node or edge to inspect. <kbd>Shift</kbd>+click a second node for the shortest path. Parameters marked ⟲ apply on Reset; all others apply live. Same seed + parameters + interventions ⇒ identical run.</p>
+  </div>
+</div></div>
+<script>
+'use strict';
+/* =====================================================================
+   CORE: utilities, parameters, seeded RNG, simulation model
+   ===================================================================== */
+const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
+const sigmoid = x => 1 / (1 + Math.exp(-x));
+function hashStr(s) { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; }
+function cosSim(a, b) { let d = 0, na = 0, nb = 0; for (let k = 0; k < a.length; k++) { d += a[k] * b[k]; na += a[k] * a[k]; nb += b[k] * b[k]; } return na && nb ? d / Math.sqrt(na * nb) : 0; }
+function normalize(v) { let s = 0; for (let k = 0; k < v.length; k++) s += v[k] * v[k]; s = Math.sqrt(s) || 1; for (let k = 0; k < v.length; k++) v[k] /= s; return v; }
+function mean(a) { if (!a.length) return 0; let s = 0; for (const x of a) s += x; return s / a.length; }
+function std(a, m) { if (a.length < 2) return 0; if (m === undefined) m = mean(a); let s = 0; for (const x of a) s += (x - m) * (x - m); return Math.sqrt(s / (a.length - 1)); }
+function gini(vals) {
+  const a = Float64Array.from(vals).sort(); const n = a.length; if (n < 2) return 0;
+  let sum = 0, cum = 0; for (let i = 0; i < n; i++) { sum += a[i]; cum += (i + 1) * a[i]; }
+  return sum > 0 ? (2 * cum) / (n * sum) - (n + 1) / n : 0;
+}
+function entropyNorm(vals) {
+  let s = 0, n = 0; for (const v of vals) if (v > 0) { s += v; n++; }
+  if (n < 2 || s <= 0) return 0; let H = 0;
+  for (const v of vals) if (v > 0) { const q = v / s; H -= q * Math.log(q); }
+  return H / Math.log(vals.length);
+}
+function pearson(x, y) {
+  const n = x.length; if (n < 3) return 0; const mx = mean(x), my = mean(y); let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < n; i++) { const a = x[i] - mx, b = y[i] - my; sxy += a * b; sxx += a * a; syy += b * b; }
+  return sxx > 0 && syy > 0 ? sxy / Math.sqrt(sxx * syy) : 0;
+}
+function ranks(a) {
+  const idx = Array.from(a, (_, i) => i).sort((i, j) => a[i] - a[j]); const r = new Float64Array(a.length);
+  for (let i = 0; i < idx.length;) { let j = i; while (j + 1 < idx.length && a[idx[j + 1]] === a[idx[i]]) j++; const rk = (i + j) / 2; for (let k = i; k <= j; k++) r[idx[k]] = rk; i = j + 1; }
+  return r;
+}
+const spearman = (x, y) => pearson(ranks(x), ranks(y));
+function kendallTrend(y) { // Kendall tau of series vs time
+  const n = y.length; if (n < 4) return 0; let c = 0, d = 0;
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const s = y[j] - y[i]; if (s > 0) c++; else if (s < 0) d++; }
+  return (c - d) / (n * (n - 1) / 2);
+}
+
+class RNG { // mulberry32
+  constructor(seed) { this.s = (seed >>> 0) || 1; }
+  next() { let t = (this.s = (this.s + 0x6D2B79F5) >>> 0); t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+  int(n) { return (this.next() * n) | 0; }
+  normal() { const u = 1 - this.next(), v = this.next(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  pick(a) { return a[(this.next() * a.length) | 0]; }
+}
+
+/* ---------- parameters: [key, label, min, max, step, default, group, initOnly, tip] ---------- */
+const PARAM_DEFS = [
+  ['n0', 'Initial nodes', 50, 4000, 10, 700, 'Network formation', 1, 'Nodes created at reset: 80% on a Watts–Strogatz ring, 20% by attachment'],
+  ['nClusters', 'Clusters', 2, 8, 1, 6, 'Network formation', 1, 'Regions / industries. Each has wage, cost, viscosity and a skill-demand vector'],
+  ['wsK', 'Lattice degree k', 2, 12, 2, 6, 'Network formation', 1, 'Watts–Strogatz ring lattice: each node links to k/2 successors'],
+  ['wsP', 'Shortcut prob. p', 0, 0.5, 0.01, 0.05, 'Network formation', 1, 'Watts–Strogatz rewiring probability (long-range shortcuts)'],
+  ['maxNodes', 'Max nodes', 100, 6000, 50, 1400, 'Network formation', 0, 'Population cap for growth'],
+  ['growth', 'Arrivals / tick', 0, 5, 0.05, 0.4, 'Network formation', 0, 'New nodes per tick (choose cluster ∝ size·wage/cost)'],
+  ['edgeRate', 'Link attempts / node·tick', 0, 0.3, 0.005, 0.04, 'Network formation', 0, 'Base attempts; multiplied by application volume A_i'],
+  ['attention', 'Attention capacity', 2, 100, 1, 10, 'Network formation', 0, 'Link attempts scale by 1/(1+k_i/attention): limited capacity to maintain ties'],
+  ['alpha', 'Pref. attachment α', 0, 2.5, 0.05, 1, 'Network formation', 0, 'P(j) ∝ η_j·(k_j+1)^α'],
+  ['fitMult', 'Fitness exponent', 0, 3, 0.05, 1, 'Network formation', 0, 'Effective fitness η_eff = (η·(1+u/2))^this. 0 = all nodes equal'],
+  ['gamma', 'Distance friction γ', 0, 4, 0.05, 1.5, 'Network formation', 0, 'Gravity term 1/(1+d/d0)^γ'],
+  ['homophily', 'Homophily β', 0, 5, 0.1, 1.5, 'Network formation', 0, 'Score × (1+β·cos(s_i,s_j))'],
+  ['triadic', 'Triadic closure θ', 0, 3, 0.05, 0.8, 'Network formation', 0, 'Score × (1+θ·common neighbours)'],
+  ['brokerBonus', 'Structural-hole bonus ε', 0, 3, 0.05, 0.5, 'Network formation', 0, 'Score × (1+ε·hole_j), hole = (1−C_j)·neighbour-cluster diversity'],
+  ['reciprocity', 'Reciprocity', 0, 1, 0.05, 0.35, 'Network formation', 0, 'Probability a new link i→j is matched by j→i'],
+  ['edgeGrowth', 'Edge reinforcement η_w', 0, 2, 0.01, 0.3, 'Network formation', 0, 'dw/dt = η_w·F·trust − λ·w'],
+  ['edgeDecay', 'Edge decay λ', 0, 0.05, 0.001, 0.01, 'Network formation', 0, 'Weight decay per tick (×4 if an endpoint is dormant)'],
+  ['pruneThr', 'Prune threshold', 0, 0.5, 0.01, 0.06, 'Network formation', 0, 'Edge removed after 20 ticks with w < this or trust < target threshold'],
+  ['noise', 'Noise', 0, 1, 0.01, 0.1, 'Network formation', 0, 'Multiplicative noise on link scores and income'],
+
+  ['kFlow', 'Flow coefficient k', 0, 2, 0.01, 0.3, 'Flow & physics', 0, 'F_ij = k·w_ij·max(0,P_i−P_j)/(1+ν)'],
+  ['pressSens', 'Hub pull φ', 0, 3, 0.05, 0.8, 'Flow & physics', 0, 'P_i = R_i/cap_i − 0.3·φ·η_i·ln(1+w_in,i): high-fitness hubs are low-pressure sinks'],
+  ['capLimit', 'Edge capacity', 0.01, 1, 0.005, 0.2, 'Flow & physics', 0, 'C_ij = capacity·(0.5+w_ij); congestion = F/C'],
+  ['congFeedback', 'Congestion cost feedback', 0, 3, 0.05, 0.5, 'Flow & physics', 0, 'Cluster cost × (1 + this·mean congestion)'],
+  ['viscosity', 'Viscosity ν', 0.05, 5, 0.05, 1, 'Flow & physics', 0, 'Institutional friction: slows flow, raises migration cost, lowers Re'],
+  ['reCrit', 'Critical Reynolds Re_c', 0.1, 5, 0.05, 1, 'Flow & physics', 0, 'Re_i = mean congestion·ln(1+k_i)/ν_i; Re > Re_c is turbulent'],
+  ['diffD', 'Diffusion D', 0, 1, 0.01, 0.2, 'Flow & physics', 0, 'Innovation: du = D·Σw(u_j−u_i)/Σw − λ_u·u + κ·u(1−u) + S'],
+  ['innovDecay', 'Innovation decay λ_u', 0, 0.1, 0.001, 0.01, 'Flow & physics', 0, ''],
+  ['adoption', 'Adoption gain κ', 0, 0.1, 0.001, 0.006, 'Flow & physics', 0, 'Logistic self-reinforcement. κ > λ_u produces travelling waves'],
+  ['innovRate', 'Innovation injections / tick', 0, 0.1, 0.001, 0.005, 'Flow & physics', 0, 'Probability per tick that a random node gets u = 1'],
+  ['drain', 'Base cost', 0, 1, 0.01, 0.05, 'Flow & physics', 0, 'Fixed cost per tick for every node'],
+  ['deprec', 'Depreciation δ', 0, 0.05, 0.001, 0.01, 'Flow & physics', 0, 'Cost term δ·R_i (bounds accumulation)'],
+  ['stressThr', 'Stress threshold', 0, 20, 0.1, 2, 'Flow & physics', 0, 'R below this → stressed (edges decay ×2, mobility ×3)'],
+  ['survivalThr', 'Survival threshold', 0, 5, 0.05, 0.3, 'Flow & physics', 0, 'R below this for 15 ticks → dormant; dormant+isolated for 80 ticks → pruned'],
+
+  ['wageMult', 'Wage multiplier', 0, 3, 0.05, 1, 'Economy & jobs', 0, ''],
+  ['costMult', 'Cost-of-living mult.', 0, 3, 0.05, 1, 'Economy & jobs', 0, 'Cluster cost = mult·(0.05+0.4·wage factor): high-wage clusters are expensive'],
+  ['mismatchPen', 'Skill mismatch penalty', 0, 5, 0.05, 1.5, 'Economy & jobs', 0, 'Steepness of hiring sigmoid σ(10·pen·(M − thr − automation))'],
+  ['hireThr', 'Hiring threshold', 0, 1, 0.01, 0.55, 'Economy & jobs', 0, ''],
+  ['automation', 'Automation level', 0, 0.6, 0.01, 0, 'Economy & jobs', 0, 'Raises the required match score'],
+  ['leverage', 'Leveraged share', 0, 1, 0.01, 0, 'Economy & jobs', 0, 'Fraction of nodes with platform/algorithmic leverage'],
+  ['leverageMult', 'Leverage multiplier', 1, 50, 1, 10, 'Economy & jobs', 0, 'Application volume multiplier for leveraged nodes'],
+  ['appVolume', 'Application volume', 0.1, 10, 0.1, 1, 'Economy & jobs', 0, 'A_i: applications / link attempts per tick'],
+  ['signalQuality', 'Signal quality', 0, 1, 0.01, 0.75, 'Economy & jobs', 0, 'q_i = quality/(1+dilution·ln A_i); S_i = q_i·match'],
+  ['dilution', 'Volume→signal dilution', 0, 1, 0.01, 0.25, 'Economy & jobs', 0, ''],
+  ['trustDecay', 'Trust decay', 0, 0.05, 0.001, 0.005, 'Economy & jobs', 0, 'Per-tick trust decay; spam (A>2, S<0.4) adds extra decay'],
+  ['retrain', 'Retraining rate', 0, 0.05, 0.001, 0.003, 'Economy & jobs', 0, 'Skill vector drifts toward cluster demand (×3 when stressed)'],
+  ['fitAdapt', 'Fitness adaptation', 0, 0.02, 0.0005, 0.002, 'Economy & jobs', 0, 'dη = rate·(employment − cluster mean employment + 0.3u)'],
+
+  ['mobility', 'Mobility rate', 0, 0.1, 0.001, 0.01, 'Migration', 0, 'Per-tick chance a node evaluates moving (×3 if stressed)'],
+  ['migBeta', 'Utility sensitivity β_m', 0, 20, 0.1, 6, 'Migration', 0, 'P_move = σ(β_m·ΔU − cost·ν)'],
+  ['migCost', 'Migration cost', 0, 10, 0.1, 3, 'Migration', 0, 'Also deducts 0.3·cost from R on moving'],
+  ['oppVar', 'Opportunity variance', 0, 1, 0.01, 0.35, 'Migration', 0, 'Spread of cluster wage factors'],
+  ['retention', 'Edge retention on move', 0, 1, 0.01, 0.5, 'Migration', 0, 'Weights of edges to the old cluster × this'],
+  ['remote', 'Remote persistence', 0, 1, 0.01, 0.2, 'Migration', 0, 'Cuts decay of cross-cluster edges and effective distance by up to 80%'],
+
+  ['zThr', 'Anomaly |z| threshold', 1, 8, 0.1, 3.5, 'Detection', 0, 'Rolling z-score threshold for the research log'],
+  ['zWin', 'Rolling window (ticks)', 20, 300, 5, 80, 'Detection', 0, ''],
+].map(a => ({ k: a[0], label: a[1], min: a[2], max: a[3], step: a[4], def: a[5], group: a[6], init: !!a[7], tip: a[8] }));
+const PDEF = Object.fromEntries(PARAM_DEFS.map(d => [d.k, d]));
+const defaultParams = () => Object.fromEntries(PARAM_DEFS.map(d => [d.k, d.def]));
+
+const SK = 6; // skill dimensions
+const CLUSTER_NAMES = ['Metro', 'Harbor', 'Foundry', 'Valley', 'Delta', 'Ridge', 'Plains', 'Outpost'];
+const CL_COLORS = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
+const IDK = 2097152; // edge key multiplier
+
+/* series recorded every tick (heavy ones are carried forward between heavy passes) */
+const HIST_KEYS = ['t', 'N', 'E', 'avgDeg', 'kmax', 'hubRatio', 'hill', 'clustering', 'pathLen', 'modularity', 'modLP', 'communities',
+  'assort', 'richClub', 'giniW', 'giniR', 'lccFrac', 'components', 'totalFlow', 'meanFlow', 'maxFlow', 'congestion', 'overloadFrac',
+  'turbulence', 'pressVar', 'entropyR', 'entropyF', 'throughput', 'dissipation', 'avgR', 'deficit', 'stressedFrac', 'dormantFrac',
+  'detachedFrac', 'hubFrac', 'births', 'deaths', 'meanTrust', 'crossFlow', 'migrations', 'failures', 'cascade', 'meanU',
+  'unemployment', 'clusterConc', 'hubShare', 'brokerShare', 'edgeLen', 'spFitDeg', 'fc', 'resRandom', 'resTarget', 'resilience',
+  'fragility', 'ar1', 'varFlow', 'meanA', 'top1Links', 'top1Flow'];
+
+class Sim {
+  constructor(params, seed, opts = {}) {
+    this.p = params; this.seed = seed >>> 0; this.rng = new RNG(this.seed);
+    this.t = 0; this.nodes = []; this.edges = []; this.emap = new Map(); this.nextId = 0; this.stamp = 0;
+    this.events = []; this.hist = {}; for (const k of HIST_KEYS) this.hist[k] = [];
+    this.m = {}; this.diag = {}; this.flags = {}; this.shocks = []; this.ghosts = []; this.migLog = [];
+    this.growthAcc = 0; this.phase = 'STABLE'; this.phaseCand = null; this.phaseHold = 0;
+    this.birthsTick = 0; this.deathsTick = 0; this.migTick = 0; this.failTick = 0; this.linkedTick = 0; this.failTotal = 0;
+    this.meanW = 1; this.hubWin = 1e9; this.meanR = 0; this.paTot = 0; this.paCum = new Float64Array(0);
+    this.top = { eig: [], betw: [], broker: [] }; this.degHist = [];
+    if (!opts.empty) this.init();
+  }
+
+  /* ---------------- initialisation ---------------- */
+  init() {
+    const p = this.p, r = this.rng, C = Math.round(p.nClusters), RW = Math.max(300, 13 * Math.sqrt(p.n0 / C) / Math.sin(Math.PI / C) + 60);
+    this.clusters = [];
+    for (let c = 0; c < C; c++) {
+      const a = 2 * Math.PI * c / C - Math.PI / 2, d = new Float64Array(SK);
+      for (let k = 0; k < SK; k++) d[k] = Math.abs(r.normal()) * 0.5;
+      d[c % SK] += 1.6; normalize(d);
+      this.clusters.push(this.makeCluster(c, Math.cos(a) * RW, Math.sin(a) * RW, clamp(r.normal(), -2, 2), 0.6 + 0.8 * r.next(), d));
+    }
+    this.updateClusterEcon();
+    const n0 = Math.round(p.n0), nWS = Math.max(10, Math.round(n0 * 0.8));
+    for (let i = 0; i < nWS; i++) this.createNode(Math.min(C - 1, Math.floor(i * C / nWS)));
+    const half = Math.max(1, Math.round(p.wsK / 2));
+    for (let i = 0; i < nWS; i++) for (let j = 1; j <= half; j++) {
+      let tg = (i + j) % nWS, type = 'social';
+      if (r.next() < p.wsP) { tg = r.int(nWS); type = 'informational'; }
+      if (tg === i) continue;
+      const a = this.nodes[i], b = this.nodes[tg];
+      this.addEdge(a, b, 0.5, 0.6, type, true);
+      if (r.next() < p.reciprocity) this.addEdge(b, a, 0.5, 0.6, type, true);
+    }
+    this.rebuild();
+    this.clusterAggregates(); this.economy();
+    for (let i = nWS; i < n0; i++) { // preferential / fitness attachment phase
+      const n = this.createNode(this.pickClusterForNewcomer());
+      this.buildPA(); this.tryConnect(n, true, true); this.tryConnect(n, true, true);
+    }
+    this.rebuild(); this.clusterAggregates(); this.economy(); this.flow();
+    for (let i = 0; i < 30; i++) this.layout(); // settle positions
+    this.lightMetrics(); this.gini0 = this.m.giniR; this.heavyMetrics(); this.record();
+  }
+  makeCluster(id, cx, cy, z, visc, demand) {
+    return { id, name: CLUSTER_NAMES[id], cx, cy, z, visc, demand, wAdj: 1, cAdj: 1, members: 0, list: [], load: 0, rho: 1, wage: 1, cost: 0.3,
+      meanR: 0, meanU: 0, congMean: 0, stressedFrac: 0, flowIn: 0, flowShare: 0, outMig: 0, inMig: 0, lowTicks: 0, lowOut: 0, uReached: false, radius: 60, meanEmp: 0 };
+  }
+  createNode(c, x, y) {
+    const r = this.rng, cl = this.clusters[c];
+    if (x === undefined) { const a = r.next() * Math.PI * 2, rad = Math.sqrt(r.next()) * cl.radius; x = cl.cx + Math.cos(a) * rad; y = cl.cy + Math.sin(a) * rad; }
+    const s = new Float64Array(SK); for (let k = 0; k < SK; k++) s[k] = cl.demand[k] * 0.8 + Math.abs(r.normal()) * 0.45; normalize(s);
+    const n = { id: this.nextId++, alive: true, x, y, vx: 0, vy: 0, fx: 0, fy: 0, c, fit: clamp(Math.exp(r.normal() * 0.4), 0.15, 4), skill: s,
+      R: 5 + r.normal() * 0.3, inc: 0, exp: 0, P: 0, cap: 5, mob: 0.5 + r.next(), levU: r.next(), lev: 1, trustThr: 0.05 + 0.2 * r.next(),
+      state: 'active', stressTicks: 0, dormantTicks: 0, dormantAt: -1e9, u: 0, mem: new Float32Array(32), memI: 0, frozen: false,
+      out: [], in: [], nb: [], deg: 0, win: 0, wout: 0, fin: 0, fout: 0, outDemand: 0, lim: 1, fe: 1, q: 1, match: 0, emp: 0, A: 1, S: 0,
+      broker: 0, hole: 0, clust: 0, eig: 0, betw: 0, Re: 0, congS: 0, congN: 0, congMean: 0, born: this.t, moves: 0, anom: 0,
+      bestC: c, dU: 0, mk: 0, idx: this.nodes.length, R10: 0, lastMove: -1e9, W: 0, comm: 0 };
+    n.mem.fill(n.R); n.R10 = n.R;
+    this.nodes.push(n); return n;
+  }
+  addEdge(a, b, w, trust, type, silent) {
+    if (a === b || !a.alive || !b.alive) return null;
+    const key = a.id * IDK + b.id, ex = this.emap.get(key); if (ex) return ex;
+    const e = { s: a, t: b, w, trust, type, F: 0, raw: 0, C: 0, cong: 0, dP: 0, age: 0, low: 0, over: 0, flash: silent ? 0 : 14, dead: false, born: this.t, dw: 0, key };
+    this.edges.push(e); this.emap.set(key, e); a.out.push(e); b.in.push(e);
+    if (!silent) this.birthsTick++;
+    return e;
+  }
+  removeEdge(e) {
+    if (e.dead) return; e.dead = true; this.emap.delete(e.key); this.deathsTick++;
+    if (this.ghosts.length < 400) this.ghosts.push({ x1: e.s.x, y1: e.s.y, x2: e.t.x, y2: e.t.y, life: 1 });
+  }
+  removeNode(n) {
+    if (!n.alive) return; n.alive = false;
+    for (const e of n.out) this.removeEdge(e); for (const e of n.in) this.removeEdge(e);
+  }
+  edgeBetween(a, b) { return this.emap.get(a.id * IDK + b.id) || null; }
+  /* compaction + adjacency (directed out/in lists, undirected distinct neighbour list nb) */
+  rebuild() {
+    if (this.edges.some(e => e.dead)) this.edges = this.edges.filter(e => !e.dead);
+    if (this.nodes.some(n => !n.alive)) this.nodes = this.nodes.filter(n => n.alive);
+    const N = this.nodes.length;
+    for (let i = 0; i < N; i++) { const n = this.nodes[i]; n.idx = i; n.out.length = 0; n.in.length = 0; n.nb.length = 0; n.win = 0; n.wout = 0; }
+    for (const e of this.edges) { e.s.out.push(e); e.t.in.push(e); e.s.wout += e.w; e.t.win += e.w; }
+    for (const n of this.nodes) {
+      const st = ++this.stamp;
+      for (const e of n.out) { const m = e.t; if (m.mk !== st) { m.mk = st; n.nb.push(m); } }
+      for (const e of n.in) { const m = e.s; if (m.mk !== st) { m.mk = st; n.nb.push(m); } }
+      n.deg = n.nb.length;
+    }
+  }
+  updateClusterEcon() {
+    const p = this.p;
+    for (const cl of this.clusters) {
+      const wf = Math.max(0.2, 1 + p.oppVar * cl.z);
+      cl.wage = p.wageMult * wf * cl.wAdj;
+      cl.cost = p.costMult * (0.05 + 0.4 * wf) * cl.cAdj;
+    }
+  }
+  pickClusterForNewcomer() {
+    const r = this.rng; let tot = 0; const w = this.clusters.map(cl => { const v = (cl.members + 5) * cl.wage / Math.max(0.05, cl.cost); tot += v; return v; });
+    let x = r.next() * tot; for (let c = 0; c < w.length; c++) { x -= w[c]; if (x <= 0) return c; } return w.length - 1;
+  }
+
+  /* ---------------- one simulation tick ---------------- */
+  tick() {
+    this.t++;
+    this.birthsTick = 0; this.deathsTick = 0; this.migTick = 0; this.failTick = 0; this.linkedTick = 0;
+    this.clusterAggregates();
+    this.economy();
+    this.flow();
+    this.resources();
+    this.innovation();
+    this.edgeDynamics();
+    this.formation();
+    this.growth();
+    this.migration();
+    this.adapt();
+    this.layout();
+    this.rebuild();
+    this.lightMetrics();
+    if (this.t % 10 === 0) this.heavyMetrics();
+    this.record();
+    this.detect();
+  }
+
+  clusterAggregates() {
+    for (const cl of this.clusters) { cl.members = 0; cl.list = []; cl.load = 0; cl.sumR = 0; cl.sumU = 0; cl.stressed = 0; cl.congS = 0; cl.congN = 0; cl.flowIn = 0; cl.sumEmp = 0; }
+    for (const n of this.nodes) {
+      const cl = this.clusters[n.c]; cl.members++; cl.list.push(n); cl.load += n.A; cl.sumR += n.R; cl.sumU += n.u; cl.sumEmp += n.emp;
+      if (n.state === 'stressed' || n.state === 'dormant') cl.stressed++;
+    }
+    for (const e of this.edges) { const cl = this.clusters[e.s.c]; cl.congS += Math.min(2, e.cong); cl.congN++; this.clusters[e.t.c].flowIn += e.F; }
+    for (const cl of this.clusters) {
+      const n = Math.max(1, cl.members);
+      cl.rho = cl.load > 0 ? Math.min(1, cl.members / cl.load) : 1; // receptivity: absorbable applications / submitted
+      cl.meanR = cl.sumR / n; cl.meanU = cl.sumU / n; cl.meanEmp = cl.sumEmp / n; cl.stressedFrac = cl.stressed / n;
+      cl.congMean = cl.congN ? cl.congS / cl.congN : 0; cl.radius = 20 + 11 * Math.sqrt(cl.members);
+    }
+    this.updateClusterEcon();
+  }
+  employment(n, cl, match) {
+    const p = this.p, S = n.q * match, H = 1 - Math.exp(-2 * n.A * S * cl.rho);
+    const netMult = 1 + 0.1 * Math.log1p(n.win + n.wout);
+    return H * sigmoid(p.mismatchPen * 10 * (match * netMult - p.hireThr - p.automation));
+  }
+  economy() {
+    const p = this.p, r = this.rng;
+    for (const n of this.nodes) {
+      const cl = this.clusters[n.c];
+      n.lev = n.levU < p.leverage ? p.leverageMult : 1;
+      n.A = p.appVolume * n.lev;
+      n.match = cosSim(n.skill, cl.demand);
+      n.q = p.signalQuality / (1 + p.dilution * Math.log(Math.max(1, n.A)));
+      n.S = n.q * n.match;
+      n.fe = Math.pow(n.fit * (1 + 0.5 * n.u), p.fitMult);
+      n.emp = this.employment(n, cl, n.match);
+      n.inc = Math.max(0, cl.wage * n.emp * (0.5 + 0.5 * n.match) * n.fe * (1 + p.noise * 0.3 * r.normal()));
+      n.exp = cl.cost * (1 + p.congFeedback * cl.congMean) + p.drain + 0.003 * n.deg + p.deprec * n.R;
+    }
+  }
+  flow() {
+    const p = this.p;
+    for (const n of this.nodes) {
+      n.cap = 5 * (1 + Math.log1p(n.win + n.wout));
+      n.P = n.R / n.cap - 0.3 * p.pressSens * n.fe * Math.log1p(n.win);
+      n.outDemand = 0; n.fin = 0; n.fout = 0; n.congS = 0; n.congN = 0;
+    }
+    for (const e of this.edges) {
+      const dP = e.s.P - e.t.P, nu = p.viscosity * this.clusters[e.s.c].visc;
+      e.dP = dP; e.C = p.capLimit * (0.5 + e.w);
+      e.raw = dP > 0 ? p.kFlow * e.w * dP / (1 + nu) : 0;
+      e.s.outDemand += e.raw;
+    }
+    for (const n of this.nodes) n.lim = n.outDemand > 0 ? Math.min(1, 0.25 * n.R / n.outDemand) : 1; // cannot send >25% of reserve
+    for (const e of this.edges) {
+      const f = e.raw * e.s.lim;
+      e.cong = e.C > 0 ? f / e.C : 0; e.F = Math.min(f, e.C);
+      e.s.fout += e.F; e.t.fin += e.F;
+      e.s.congS += e.cong; e.s.congN++; e.t.congS += e.cong; e.t.congN++;
+    }
+    for (const n of this.nodes) {
+      n.congMean = n.congN ? n.congS / n.congN : 0;
+      n.Re = n.congMean * Math.log1p(n.deg) / (p.viscosity * this.clusters[n.c].visc);
+    }
+  }
+  resources() {
+    const p = this.p; let sw = 0, sw2 = 0, sR = 0; const N = this.nodes.length;
+    for (const n of this.nodes) {
+      if (!n.frozen) n.R = Math.max(0, n.R + n.fin - n.fout + n.inc - n.exp);
+      n.mem[n.memI] = n.R; n.memI = (n.memI + 1) & 31;
+      if (n.frozen) continue;
+      if (n.R < p.survivalThr) n.stressTicks++; else if (n.stressTicks > 0) n.stressTicks--;
+      if (n.state === 'dormant') {
+        if (n.R > p.stressThr * 1.5) { n.state = 'active'; n.stressTicks = 0; } else n.dormantTicks++;
+      } else if (n.stressTicks > 15) {
+        n.state = 'dormant'; n.dormantTicks = 0; this.failTick++; this.failTotal++;
+        for (const m of n.nb) if (this.t - m.dormantAt <= 10) { this.linkedTick++; break; }
+        n.dormantAt = this.t;
+      }
+      if (n.state !== 'dormant') n.state = n.deg === 0 ? 'detached' : n.R < p.stressThr ? 'stressed' : (n.win > this.hubWin && n.R > this.meanR) ? 'hub' : 'active';
+    }
+    for (const n of this.nodes) {
+      if (n.state === 'dormant' && n.deg === 0 && n.dormantTicks > 80 && !n.frozen) this.removeNode(n);
+      sw += n.win; sw2 += n.win * n.win; sR += n.R;
+    }
+    const mw = N ? sw / N : 0; this.hubWin = mw + 2.5 * Math.sqrt(Math.max(0, (N ? sw2 / N : 0) - mw * mw)); this.meanR = N ? sR / N : 0;
+  }
+  innovation() {
+    const p = this.p, N = this.nodes.length, du = new Float64Array(N), ws = new Float64Array(N);
+    for (const e of this.edges) { const a = e.s.idx, b = e.t.idx, d = e.t.u - e.s.u; du[a] += e.w * d; du[b] -= e.w * d; ws[a] += e.w; ws[b] += e.w; }
+    for (let i = 0; i < N; i++) {
+      const n = this.nodes[i]; if (!n.alive) continue;
+      n.u = clamp(n.u + p.diffD * du[i] / Math.max(1, ws[i]) - p.innovDecay * n.u + p.adoption * n.u * (1 - n.u), 0, 1);
+    }
+    if (N && this.rng.next() < p.innovRate) this.injectInnovation(this.rng.pick(this.nodes), false);
+  }
+  injectInnovation(n, logIt) {
+    n.u = 1; for (const m of n.nb) m.u = Math.max(m.u, 0.5);
+    if (logIt) { this.innovOrigin = n.c; for (const cl of this.clusters) cl.uReached = cl.meanU > 0.1; }
+  }
+  edgeDynamics() {
+    const p = this.p;
+    for (const e of this.edges) {
+      if (e.dead) continue;
+      const s = e.s, t = e.t; e.age++; if (e.flash > 0) e.flash--;
+      let dm = 1; if (s.state === 'dormant' || t.state === 'dormant') dm += 3; if (s.state === 'stressed' || t.state === 'stressed') dm += 1;
+      if (s.c !== t.c) dm *= 1 - 0.8 * p.remote;
+      const dw = p.edgeGrowth * e.F * e.trust - p.edgeDecay * e.w * dm;
+      e.w = clamp(e.w + dw, 0, 5); e.dw = dw;
+      if (e.F > 1e-6 && e.cong <= 1) e.trust += 0.02 * (1 - e.trust);
+      if (e.cong > 1) { e.trust -= 0.03 * Math.min(2, e.cong - 0.8); e.over++; } else if (e.over > 0) e.over--;
+      if (s.A > 2 && s.S < 0.4) e.trust -= p.trustDecay * 4 * (0.4 - s.S) * Math.log(s.A); // spam penalty
+      e.trust = clamp(e.trust - p.trustDecay * e.trust, 0, 1);
+      if (e.over > 10) { e.w *= 0.85; e.trust *= 0.8; e.over = 4; }
+      e.low = (e.w < p.pruneThr || e.trust < t.trustThr) ? e.low + 1 : 0;
+      if (e.low > 20 && !(s.frozen && t.frozen)) this.removeEdge(e);
+    }
+  }
+  buildPA() {
+    const p = this.p, N = this.nodes.length; if (this.paCum.length < N) this.paCum = new Float64Array(N * 2);
+    let s = 0; for (let i = 0; i < N; i++) { const n = this.nodes[i]; n.W = (n.state === 'dormant' || !n.alive) ? 0 : n.fe * Math.pow(n.deg + 1, p.alpha); s += n.W; this.paCum[i] = s; }
+    this.paTot = s; this.paN = N; this.meanW = N ? s / N : 1;
+    for (const cl of this.clusters) { let cs = 0; cl.cum = new Float64Array(cl.list.length); for (let i = 0; i < cl.list.length; i++) { cs += cl.list[i].W || 0; cl.cum[i] = cs; } cl.cumTot = cs; }
+  }
+  samplePA() {
+    const x = this.rng.next() * this.paTot, c = this.paCum; let lo = 0, hi = this.paN - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (c[mid] > x) hi = mid; else lo = mid + 1; }
+    return this.nodes[lo];
+  }
+  /* candidate proposal + roulette on the attachment score; returns created/reinforced edge or null */
+  tryConnect(i, force, silent) {
+    const p = this.p, r = this.rng, N = this.nodes.length; if (N < 2) return null;
+    const cands = [], org = [];
+    if (this.paTot > 0) for (let k = 0; k < 3; k++) { cands.push(this.samplePA()); org.push(0); }
+    const cl = this.clusters[i.c]; if (cl.cum && cl.cumTot > 0) for (let k = 0; k < 2; k++) {
+      const x = r.next() * cl.cumTot; let lo = 0, hi = cl.cum.length - 1;
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (cl.cum[mid] > x) hi = mid; else lo = mid + 1; }
+      cands.push(cl.list[lo]); org.push(1);
+    }
+    if (i.nb.length) for (let k = 0; k < 2; k++) { const m = r.pick(i.nb); if (m.nb.length) { cands.push(r.pick(m.nb)); org.push(2); } }
+    cands.push(this.nodes[r.int(N)]); org.push(3);
+    const st = ++this.stamp; for (const m of i.nb) m.mk = st;
+    const rf = 1 - 0.8 * p.remote, sc = []; let tot = 0;
+    for (let c = 0; c < cands.length; c++) {
+      const j = cands[c]; let s = 0;
+      if (j !== i && j.alive && j.state !== 'dormant') {
+        let cn = 0; for (const m of j.nb) if (m.mk === st) cn++;
+        const sim = cosSim(i.skill, j.skill), dx = j.x - i.x, dy = j.y - i.y, d = Math.sqrt(dx * dx + dy * dy) * rf;
+        const base = org[c] <= 1 ? 1 : j.fe * Math.pow(j.deg + 1, p.alpha) / this.meanW; // PA-sampled candidates already carry W_j
+        s = base * (1 + p.homophily * sim) * (1 + p.triadic * cn) * (1 + p.brokerBonus * j.hole) * (j.c === i.c ? 1.5 : 1) / Math.pow(1 + d / 120, p.gamma);
+        s *= Math.max(0.05, 1 + p.noise * (2 * r.next() - 1));
+      }
+      sc.push(s); tot += s;
+    }
+    if (!(tot > 0)) return null;
+    let x = r.next() * tot, c = 0;
+    for (; c < cands.length; c++) { x -= sc[c]; if (x <= 0 && sc[c] > 0) break; }
+    if (c >= cands.length) { c = cands.length - 1; while (c > 0 && !(sc[c] > 0)) c--; }
+    const j = cands[c], o = org[c], ex = this.edgeBetween(i, j);
+    if (ex) { ex.w = Math.min(5, ex.w + 0.05); ex.trust = Math.min(1, ex.trust + 0.02); return ex; }
+    const pAcc = force ? 1 : this.clusters[j.c].rho * (0.25 + 0.75 * i.S);
+    if (r.next() >= pAcc) return null;
+    const type = i.lev > 1 ? 'platform' : o === 2 ? 'social' : i.c !== j.c ? 'informational' : o === 0 ? 'economic' : 'institutional';
+    const w0 = 0.15 + 0.35 * i.S, t0 = 0.3 + 0.4 * i.S;
+    const e = this.addEdge(i, j, w0, t0, type, silent);
+    if (r.next() < p.reciprocity && !this.edgeBetween(j, i)) this.addEdge(j, i, w0, t0, type, silent);
+    return e;
+  }
+  formation() {
+    const p = this.p, r = this.rng; this.buildPA();
+    const N = this.nodes.length;
+    for (let idx = 0; idx < N; idx++) {
+      const n = this.nodes[idx]; if (!n.alive || n.state === 'dormant' || n.frozen) continue;
+      const x = p.edgeRate * n.A * (1 + 0.5 * Math.min(2, n.R / n.cap)) / (1 + n.deg / p.attention); let k = Math.floor(x); if (r.next() < x - k) k++;
+      for (let j = 0; j < k; j++) this.tryConnect(n, false, false);
+    }
+  }
+  growth() {
+    const p = this.p; this.growthAcc += p.growth;
+    while (this.growthAcc >= 1) {
+      this.growthAcc -= 1;
+      if (this.nodes.length >= p.maxNodes) { this.growthAcc = 0; break; }
+      const n = this.createNode(this.pickClusterForNewcomer()); n.R = 3;
+      this.tryConnect(n, true, false); this.tryConnect(n, true, false);
+    }
+  }
+  utility(n, c) {
+    const p = this.p, cl = this.clusters[c], match = cosSim(n.skill, cl.demand);
+    const inc = cl.wage * this.employment(n, cl, match) * (0.5 + 0.5 * match) * n.fe;
+    let nb = 0; for (const e of n.out) if (!e.dead && e.t.c === c) nb += e.w * e.trust; for (const e of n.in) if (!e.dead && e.s.c === c) nb += e.w * e.trust;
+    return inc - cl.cost * (1 + p.congFeedback * cl.congMean) + 0.05 * nb - 0.5 * cl.stressedFrac * cl.wage;
+  }
+  migration() {
+    const p = this.p, r = this.rng, C = this.clusters.length; if (C < 2) return;
+    for (const n of this.nodes) {
+      if (!n.alive || n.frozen) continue;
+      const prob = p.mobility * n.mob * ((n.state === 'stressed' || n.state === 'dormant' || n.state === 'detached') ? 3 : 1);
+      if (r.next() >= prob) continue;
+      let c1 = r.int(C - 1); if (c1 >= n.c) c1++;
+      const dU = this.utility(n, c1) - this.utility(n, n.c), nu = p.viscosity * this.clusters[n.c].visc;
+      if (r.next() < sigmoid(p.migBeta * dU - p.migCost * nu)) this.moveNode(n, c1, dU);
+    }
+  }
+  moveNode(n, c1, dU) {
+    const p = this.p, c0 = n.c; if (c0 === c1) return;
+    n.R = Math.max(0, n.R - 0.3 * p.migCost);
+    for (const e of n.out) if (!e.dead && e.t.c === c0) e.w *= p.retention;
+    for (const e of n.in) if (!e.dead && e.s.c === c0) e.w *= p.retention;
+    n.c = c1; n.moves++; n.lastMove = this.t;
+    this.clusters[c0].outMig++; this.clusters[c0].lowOut++; this.clusters[c1].inMig++; this.migTick++;
+    this.migLog.push({ t: this.t, id: n.id, from: c0, to: c1, dU }); if (this.migLog.length > 500) this.migLog.shift();
+  }
+  adapt() {
+    const p = this.p;
+    for (const n of this.nodes) {
+      if (!n.alive || n.frozen) continue;
+      const d = this.clusters[n.c].demand, rate = p.retrain * ((n.state === 'stressed' || n.state === 'dormant') ? 3 : 1);
+      if (rate > 0) { for (let k = 0; k < SK; k++) n.skill[k] += rate * (d[k] - n.skill[k]); normalize(n.skill); }
+      n.fit = clamp(n.fit + p.fitAdapt * (n.emp - this.clusters[n.c].meanEmp + 0.3 * n.u), 0.1, 4);
+    }
+  }
+  /* force layout: cluster anchors, grid-hashed repulsion, edge springs (fixed step => deterministic) */
+  layout() {
+    const G = 30, nodes = this.nodes, N = nodes.length; if (!N) return;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const n of nodes) { n.fx = 0; n.fy = 0; if (n.x < x0) x0 = n.x; if (n.y < y0) y0 = n.y; if (n.x > x1) x1 = n.x; if (n.y > y1) y1 = n.y; }
+    const cols = Math.min(2000, Math.floor((x1 - x0) / G) + 1), rows = Math.min(2000, Math.floor((y1 - y0) / G) + 1), NC = cols * rows;
+    if (!this._cs || this._cs.length < NC + 1) this._cs = new Int32Array(NC + 1);
+    if (!this._ci || this._ci.length < N) { this._ci = new Int32Array(N * 2); this._cn = new Int32Array(N * 2); }
+    const cs = this._cs, ci = this._ci, cn = this._cn; cs.fill(0, 0, NC + 1);
+    for (let i = 0; i < N; i++) { const n = nodes[i]; const c = Math.min(cols - 1, Math.floor((n.x - x0) / G)) + cols * Math.min(rows - 1, Math.floor((n.y - y0) / G)); cn[i] = c; cs[c + 1]++; }
+    for (let c = 0; c < NC; c++) cs[c + 1] += cs[c];
+    const fill = this._cf && this._cf.length >= NC ? this._cf : (this._cf = new Int32Array(NC + 1)); fill.set(cs.subarray(0, NC));
+    for (let i = 0; i < N; i++) ci[fill[cn[i]]++] = i;
+    for (let i = 0; i < N; i++) {
+      const n = nodes[i]; if (!n.alive) continue;
+      const cl = this.clusters[n.c]; let tx = cl.cx, ty = cl.cy, kA = 0.0035;
+      if (n.state === 'dormant' || n.state === 'detached') {
+        const L = Math.hypot(cl.cx, cl.cy) || 1; tx = cl.cx + cl.cx / L * (cl.radius + 70); ty = cl.cy + cl.cy / L * (cl.radius + 70); kA = 0.002;
+      }
+      const dx = tx - n.x, dy = ty - n.y, d = Math.hypot(dx, dy);
+      const k = d > cl.radius ? kA * 3 : kA; n.fx += dx * k; n.fy += dy * k;
+      const gc = cn[i] % cols, gr = (cn[i] - gc) / cols;
+      for (let oy = -1; oy <= 1; oy++) {
+        const r0 = gr + oy; if (r0 < 0 || r0 >= rows) continue;
+        for (let ox = -1; ox <= 1; ox++) {
+          const c0 = gc + ox; if (c0 < 0 || c0 >= cols) continue; const c = r0 * cols + c0;
+          for (let q = cs[c], qe = cs[c + 1]; q < qe; q++) {
+            const j = ci[q]; if (j <= i) continue; const m = nodes[j]; if (!m.alive) continue;
+            const ex = m.x - n.x, ey = m.y - n.y, d2 = ex * ex + ey * ey;
+            if (d2 < G * G && d2 > 1e-6) { const dd = Math.sqrt(d2), f = 0.9 * (1 - dd / G) / dd; n.fx -= ex * f; n.fy -= ey * f; m.fx += ex * f; m.fy += ey * f; }
+            else if (d2 <= 1e-6) { n.fx += 0.3; m.fx -= 0.3; }
+          }
+        }
+      }
+    }
+    for (const e of this.edges) {
+      if (e.dead) continue; const s = e.s, t = e.t, dx = t.x - s.x, dy = t.y - s.y;
+      const k = s.c === t.c ? 0.0004 + 0.0008 * Math.min(2, e.w) : 0.00025 * Math.min(2, e.w);
+      s.fx += dx * k; s.fy += dy * k; t.fx -= dx * k; t.fy -= dy * k;
+    }
+    for (const n of nodes) {
+      if (!n.alive) continue;
+      if (n.frozen) { n.vx = n.vy = 0; continue; }
+      n.vx = clamp((n.vx + n.fx) * 0.8, -6, 6); n.vy = clamp((n.vy + n.fy) * 0.8, -6, 6); n.x += n.vx; n.y += n.vy;
+    }
+  }
+}
+/* =====================================================================
+   METRICS, DETECTION, SHOCKS, SERIALISATION  (mixed into Sim)
+   ===================================================================== */
+const ANOM_KEYS = [
+  ['totalFlow', 1, 'flow surge', 'flow collapse'], ['throughput', 1, 'output boom', 'output contraction'],
+  ['giniR', 1, 'inequality spike', 'equalisation'], ['congestion', 1, 'congestion onset', 'decongestion'],
+  ['turbulence', 1, 'laminar → turbulent transition', 'relaminarisation'], ['stressedFrac', 1, 'stress wave', 'stress relief'],
+  ['deaths', 1, 'pruning burst', ''], ['births', 1, 'attachment burst', 'attachment freeze'], ['migrations', 1, 'migration wave', ''],
+  ['meanTrust', 1, '', 'trust erosion'], ['crossFlow', 1, 'cross-cluster opening', 'cross-cluster decoupling'],
+  ['N', 1, 'population surge', 'population collapse'], ['cascade', 1, 'cascade failure', ''],
+  ['lccFrac', 10, 'reconnection', 'sudden fragmentation'], ['modularity', 10, 'segregation / echo chamber', 'integration'],
+  ['richClub', 10, 'rich-club consolidation', 'rich-club dissolution'], ['hubShare', 10, 'hub dominance', 'hub collapse'], ['top1Links', 10, 'attachment concentrating in top 1%', 'hub deconcentration'],
+  ['clustering', 10, 'triadic closure surge', 'clustering loss'], ['ar1', 10, 'critical slowing (autocorrelation ↑)', ''],
+];
+const PHASE_INFO = {
+  STABLE: 'Laminar flow, connected, no dominant hub', CONGESTED: 'Flow-weighted congestion > 0.5', TURBULENT: 'More than 30% of flow passes turbulent nodes (Re > Re_c)',
+  FRAGMENTED: 'Largest component < 50% of nodes', MONOPOLIZED: 'Top 1% of nodes hold > 20% of incoming links or > 25% of inflow, or one cluster takes > 50% of flow',
+};
+
+Object.assign(Sim.prototype, {
+  lightMetrics() {
+    const m = this.m, p = this.p, N = this.nodes.length, E = this.edges.length;
+    m.t = this.t; m.N = N; m.E = E;
+    let sumF = 0, maxF = 0, fc = 0, over = 0, trust = 0, cross = 0, diss = 0;
+    const Fs = new Float64Array(E);
+    for (let i = 0; i < E; i++) {
+      const e = this.edges[i]; Fs[i] = e.F; sumF += e.F; if (e.F > maxF) maxF = e.F; fc += e.F * Math.min(3, e.cong);
+      if (e.cong > 1) over++; trust += e.trust; if (e.s.c !== e.t.c) cross += e.F; if (e.F > 0) diss += e.F * e.dP;
+    }
+    m.totalFlow = sumF; m.meanFlow = E ? sumF / E : 0; m.maxFlow = maxF; m.congestion = sumF > 0 ? fc / sumF : 0;
+    m.overloadFrac = E ? over / E : 0; m.meanTrust = E ? trust / E : 0; m.crossFlow = sumF > 0 ? cross / sumF : 0; m.dissipation = diss;
+    m.entropyF = entropyNorm(Fs);
+    const Rs = new Float64Array(N), Ws = new Float64Array(N);
+    let sR = 0, sInc = 0, sP = 0, sP2 = 0, def = 0, st = 0, dor = 0, det = 0, hub = 0, turbF = 0, allF = 0, sU = 0, sEmp = 0, sDeg = 0, kmax = 0, maxIn = 0, sA = 0;
+    for (let i = 0; i < N; i++) {
+      const n = this.nodes[i]; Rs[i] = n.R; Ws[i] = n.win + n.wout; sR += n.R; sInc += n.inc; sP += n.P; sP2 += n.P * n.P; sA += n.A;
+      def += Math.max(0, p.stressThr - n.R) / Math.max(1e-9, p.stressThr);
+      if (n.state === 'stressed') st++; else if (n.state === 'dormant') dor++; else if (n.state === 'detached') det++; else if (n.state === 'hub') hub++;
+      const fl = n.fin + n.fout; allF += fl; if (n.Re > p.reCrit) turbF += fl;
+      sU += n.u; sEmp += n.emp; sDeg += n.deg; if (n.deg > kmax) kmax = n.deg; if (n.fin > maxIn) maxIn = n.fin;
+    }
+    const iN = N ? 1 / N : 0;
+    m.avgR = sR * iN; m.throughput = sInc; m.pressVar = N ? sP2 * iN - (sP * iN) ** 2 : 0; m.deficit = def * iN;
+    m.stressedFrac = st * iN; m.dormantFrac = dor * iN; m.detachedFrac = det * iN; m.hubFrac = hub * iN;
+    m.turbulence = allF > 0 ? turbF / allF : 0; m.meanU = sU * iN; m.unemployment = 1 - sEmp * iN; m.meanA = sA * iN;
+    m.avgDeg = sDeg * iN; m.kmax = kmax; m.hubRatio = m.avgDeg > 0 ? kmax / m.avgDeg : 0; m.hubShare = sumF > 0 ? maxIn / sumF : 0;
+    m.giniR = gini(Rs); m.giniW = gini(Ws); m.entropyR = entropyNorm(Rs);
+    m.births = this.birthsTick; m.deaths = this.deathsTick; m.migrations = this.migTick; m.failures = this.failTick;
+    let hhi = 0; for (const cl of this.clusters) { const s = cl.members * iN; hhi += s * s; } m.clusterConc = hhi;
+    let topCl = 0; for (const cl of this.clusters) { cl.flowShare = sumF > 0 ? cl.flowIn / sumF : 0; if (cl.flowShare > topCl) topCl = cl.flowShare; } m.topClusterShare = topCl;
+    // linked failures over last 10 ticks = cascade size
+    this.cascBuf = this.cascBuf || []; this.cascBuf.push(this.linkedTick); if (this.cascBuf.length > 10) this.cascBuf.shift();
+    m.cascade = this.cascBuf.reduce((a, b) => a + b, 0);
+    // early-warning statistics on total flow (detrended, window 50)
+    const h = this.hist.totalFlow, W = 50;
+    if (h.length >= W) {
+      const y = h.slice(-W - 1, -1).concat([sumF]).slice(-W); let sx = 0, sy = 0, sxy = 0, sxx = 0;
+      for (let i = 0; i < W; i++) { sx += i; sy += y[i]; sxy += i * y[i]; sxx += i * i; }
+      const b = (W * sxy - sx * sy) / (W * sxx - sx * sx), a = (sy - b * sx) / W; let v = 0, c1 = 0;
+      const res = y.map((v0, i) => v0 - (a + b * i));
+      for (let i = 0; i < W; i++) { v += res[i] * res[i]; if (i) c1 += res[i] * res[i - 1]; }
+      const my = sy / W; m.ar1 = v > 0 ? c1 / v : 0; m.varFlow = my > 0 ? (v / W) / (my * my) : 0;
+    } else { m.ar1 = m.ar1 || 0; m.varFlow = m.varFlow || 0; }
+  },
+
+  heavyMetrics() {
+    const m = this.m, p = this.p, nodes = this.nodes, N = nodes.length, C = this.clusters.length;
+    const mr = new RNG((this.seed ^ Math.imul(this.t + 7, 2654435761)) >>> 0); // metric sampling never touches the model RNG
+    if (N < 3) return;
+    /* typed-array views: directed edge list and undirected CSR adjacency */
+    const E = this.edges.length, es = new Int32Array(E), et = new Int32Array(E), ew = new Float64Array(E);
+    for (let i = 0; i < E; i++) { const e = this.edges[i]; es[i] = e.s.idx; et[i] = e.t.idx; ew[i] = e.w; }
+    const off = new Int32Array(N + 1); for (let i = 0; i < N; i++) off[i + 1] = off[i] + nodes[i].nb.length;
+    const adj = new Int32Array(off[N]); for (let i = 0; i < N; i++) { let q = off[i]; for (const m of nodes[i].nb) adj[q++] = m.idx; }
+    /* clustering, brokerage (non-redundant neighbour pairs), structural-hole value */
+    let sumC = 0; const cnt = new Float64Array(C), mark = new Int32Array(N);
+    for (let i = 0; i < N; i++) {
+      const n = nodes[i], k = off[i + 1] - off[i]; if (k < 2) { n.clust = 0; n.broker = 0; n.hole = 0; continue; }
+      const pairs = k * (k - 1) / 2; let ties = 0;
+      if (k <= 80) {
+        const st = i + 1; for (let q = off[i]; q < off[i + 1]; q++) mark[adj[q]] = st;
+        let t2 = 0; // each tie counted twice
+        for (let q = off[i]; q < off[i + 1]; q++) { const a = adj[q]; for (let r2 = off[a]; r2 < off[a + 1]; r2++) if (mark[adj[r2]] === st) t2++; }
+        ties = t2 / 2;
+      } else {
+        let hit = 0; const S = 2000;
+        for (let s = 0; s < S; s++) { const a = n.nb[mr.int(k)]; let b = n.nb[mr.int(k - 1)]; if (b === a) b = n.nb[k - 1]; if (this.edgeBetween(a, b) || this.edgeBetween(b, a)) hit++; }
+        ties = hit / S * pairs;
+      }
+      n.clust = ties / pairs; n.broker = pairs - ties; sumC += n.clust;
+      cnt.fill(0); for (const x of n.nb) cnt[x.c]++;
+      let H = 0; for (let c = 0; c < C; c++) if (cnt[c] > 0) { const q = cnt[c] / k; H -= q * Math.log(q); }
+      const Hm = Math.log(Math.min(k, C)); n.hole = (1 - n.clust) * (Hm > 0 ? H / Hm : 0);
+    }
+    m.clustering = sumC / N;
+    /* components (union–find) */
+    const uf = (skip) => {
+      const par = new Int32Array(N); for (let i = 0; i < N; i++) par[i] = i;
+      const find = x => { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; };
+      for (const e of this.edges) { const a = e.s.idx, b = e.t.idx; if (skip && (skip[a] || skip[b])) continue; const ra = find(a), rb = find(b); if (ra !== rb) par[ra] = rb; }
+      const size = new Int32Array(N); let best = 0, bestR = 0, comps = 0;
+      for (let i = 0; i < N; i++) { if (skip && skip[i]) continue; const r0 = find(i); if (size[r0]++ === 0) comps++; if (size[r0] > best) { best = size[r0]; bestR = r0; } }
+      return { best, comps, root: bestR, find };
+    };
+    const base = uf(null); m.lccFrac = base.best / N; m.components = base.comps;
+    const lccNodes = []; for (let i = 0; i < N; i++) if (base.find(i) === base.root) lccNodes.push(i);
+    /* sampled BFS: path length + Brandes betweenness (unweighted, undirected) */
+    const dist = new Int32Array(N), sigma = new Float64Array(N), delta = new Float64Array(N), bc = new Float64Array(N), queue = new Int32Array(N);
+    const S = Math.min(12, lccNodes.length); let dSum = 0, dCnt = 0, diam = 0;
+    for (let s = 0; s < S; s++) {
+      const src = lccNodes[mr.int(lccNodes.length)]; dist.fill(-1); sigma.fill(0); delta.fill(0);
+      dist[src] = 0; sigma[src] = 1; let qh = 0, qt = 0; queue[qt++] = src;
+      while (qh < qt) {
+        const v = queue[qh++], dv = dist[v] + 1;
+        for (let q = off[v], qe = off[v + 1]; q < qe; q++) { const w = adj[q]; if (dist[w] < 0) { dist[w] = dv; queue[qt++] = w; } if (dist[w] === dv) sigma[w] += sigma[v]; }
+      }
+      for (let i = 1; i < qt; i++) { dSum += dist[queue[i]]; dCnt++; if (dist[queue[i]] > diam) diam = dist[queue[i]]; }
+      for (let i = qt - 1; i > 0; i--) {
+        const w = queue[i], dw = dist[w] - 1, cw = (1 + delta[w]) / sigma[w];
+        for (let q = off[w], qe = off[w + 1]; q < qe; q++) { const v = adj[q]; if (dist[v] === dw) delta[v] += sigma[v] * cw; }
+        bc[w] += delta[w];
+      }
+    }
+    m.pathLen = dCnt ? dSum / dCnt : 0; m.diameter = diam;
+    let bmax = 0; for (let i = 0; i < N; i++) if (bc[i] > bmax) bmax = bc[i];
+    for (let i = 0; i < N; i++) nodes[i].betw = bmax > 0 ? bc[i] / bmax : 0;
+    /* eigenvector centrality (power iteration, undirected weighted, shifted) */
+    let x = new Float64Array(N).fill(1), y = new Float64Array(N);
+    for (let it = 0; it < 30; it++) {
+      for (let i = 0; i < N; i++) y[i] = x[i];
+      for (let q = 0; q < E; q++) { const a = es[q], b = et[q], w = ew[q]; y[a] += w * x[b]; y[b] += w * x[a]; }
+      let mx = 0; for (let i = 0; i < N; i++) if (y[i] > mx) mx = y[i]; if (mx <= 0) break;
+      for (let i = 0; i < N; i++) x[i] = y[i] / mx;
+    }
+    for (let i = 0; i < N; i++) nodes[i].eig = x[i];
+    /* degree distribution: Hill (MLE) tail exponent, CCDF, assortativity, rich club, percolation */
+    const degs = nodes.map(n => n.deg), sorted = Float64Array.from(degs).sort();
+    const kmin = Math.max(2, sorted[Math.floor(N / 2)]); let tailN = 0, tailS = 0;
+    for (const k of degs) if (k >= kmin) { tailN++; tailS += Math.log(k / (kmin - 0.5)); }
+    m.hill = tailS > 0 ? 1 + tailN / tailS : 0; m.hillKmin = kmin;
+    const dh = new Map(); for (const k of degs) dh.set(k, (dh.get(k) || 0) + 1); this.degHist = [...dh.entries()].sort((a, b) => a[0] - b[0]);
+    let Eu = 0, s1 = 0, s2 = 0, s3 = 0; const kThr = sorted[Math.floor(N * 0.9)]; let Nk = 0, Ek = 0;
+    for (const n of nodes) if (n.deg > kThr) Nk++;
+    for (const e of this.edges) {
+      if (e.s.id > e.t.id && this.edgeBetween(e.t, e.s)) continue; // count reciprocal pairs once
+      Eu++; const j = e.s.deg, k = e.t.deg; s1 += j * k; s2 += (j + k) / 2; s3 += (j * j + k * k) / 2;
+      if (e.s.deg > kThr && e.t.deg > kThr) Ek++;
+    }
+    if (Eu) { const a = s1 / Eu, b = (s2 / Eu) ** 2, c = s3 / Eu; m.assort = c - b !== 0 ? (a - b) / (c - b) : 0; } else m.assort = 0;
+    const dens = N > 1 ? 2 * Eu / (N * (N - 1)) : 0;
+    m.richPhi = Nk > 1 ? 2 * Ek / (Nk * (Nk - 1)) : 0; m.richClub = dens > 0 ? m.richPhi / dens : 0;
+    let k1 = 0, k2 = 0; for (const k of degs) { k1 += k; k2 += k * k; } const kap = k1 > 0 ? k2 / k1 : 0;
+    m.kappa = kap; m.fc = kap > 2 ? 1 - 1 / (kap - 1) : 0; // Molloy–Reed critical removal fraction
+    /* resilience: LCC retained after removing 10% random vs 10% highest-degree nodes */
+    const rem = Math.max(1, Math.floor(N * 0.1)), skipR = new Uint8Array(N), skipT = new Uint8Array(N);
+    let rc = 0; while (rc < rem) { const i = mr.int(N); if (!skipR[i]) { skipR[i] = 1; rc++; } }
+    const byDeg = Array.from(degs.keys()).sort((a, b) => degs[b] - degs[a]); for (let i = 0; i < rem; i++) skipT[byDeg[i]] = 1;
+    m.resRandom = base.best ? uf(skipR).best / base.best : 0; m.resTarget = base.best ? uf(skipT).best / base.best : 0;
+    m.resilience = (m.resRandom + m.resTarget) / 2; m.fragility = m.resRandom - m.resTarget;
+    /* modularity: by cluster label and by label-propagation communities */
+    const modQ = (lab, L) => {
+      const inW = new Float64Array(L), tot = new Float64Array(L); let W = 0;
+      for (let q = 0; q < E; q++) { const a = lab[es[q]], b = lab[et[q]], w = ew[q]; W += w; tot[a] += w; tot[b] += w; if (a === b) inW[a] += w; }
+      if (W <= 0) return 0; let Q = 0; for (let c = 0; c < L; c++) Q += inW[c] / W - (tot[c] / (2 * W)) ** 2; return Q;
+    };
+    const labC = new Int32Array(N); for (let i = 0; i < N; i++) labC[i] = nodes[i].c; m.modularity = modQ(labC, C);
+    const lab = new Int32Array(N); for (let i = 0; i < N; i++) lab[i] = i;
+    const acc = new Float64Array(N), order = Int32Array.from({ length: N }, (_, i) => i), touched = new Int32Array(N);
+    const woff = new Int32Array(N + 1); for (let q = 0; q < E; q++) { woff[es[q] + 1]++; woff[et[q] + 1]++; } for (let i = 0; i < N; i++) woff[i + 1] += woff[i];
+    const wadj = new Int32Array(2 * E), wwt = new Float64Array(2 * E), wf = woff.slice(0, N);
+    for (let q = 0; q < E; q++) { const a = es[q], b = et[q]; wadj[wf[a]] = b; wwt[wf[a]++] = ew[q]; wadj[wf[b]] = a; wwt[wf[b]++] = ew[q]; }
+    for (let sweep = 0; sweep < 6; sweep++) {
+      for (let i = N - 1; i > 0; i--) { const j = mr.int(i + 1); const t = order[i]; order[i] = order[j]; order[j] = t; }
+      for (let oi = 0; oi < N; oi++) {
+        const i = order[oi]; if (woff[i] === woff[i + 1]) continue; let nt = 0;
+        for (let q = woff[i]; q < woff[i + 1]; q++) { const l = lab[wadj[q]]; if (acc[l] === 0) touched[nt++] = l; acc[l] += wwt[q] + 1e-12; }
+        let best = lab[i], bw = -1; for (let z = 0; z < nt; z++) { const l = touched[z]; if (acc[l] > bw) { bw = acc[l]; best = l; } acc[l] = 0; }
+        lab[i] = best;
+      }
+    }
+    const remap = new Map(); for (let i = 0; i < N; i++) { if (!remap.has(lab[i])) remap.set(lab[i], remap.size); lab[i] = remap.get(lab[i]); }
+    const csz = new Int32Array(remap.size); for (let i = 0; i < N; i++) csz[lab[i]]++;
+    m.communities = csz.filter(s => s >= Math.max(3, 0.005 * N)).length; m.modLP = modQ(lab, remap.size);
+    for (let i = 0; i < N; i++) nodes[i].comm = lab[i];
+    /* brokerage concentration, top lists */
+    const byHole = nodes.slice().sort((a, b) => b.hole - a.hole), nb5 = Math.max(1, Math.floor(N * 0.05));
+    let fb = 0, fa = 0; for (let i = 0; i < N; i++) { fa += byHole[i].fin; if (i < nb5) fb += byHole[i].fin; } m.brokerShare = fa > 0 ? fb / fa : 0;
+    const n1 = Math.max(1, Math.floor(N * 0.01)), kin = nodes.map(n => n.in.length).sort((a, b) => b - a), fins = nodes.map(n => n.fin).sort((a, b) => b - a);
+    const sumK = kin.reduce((a, b) => a + b, 0), sumF = fins.reduce((a, b) => a + b, 0);
+    m.top1Links = sumK > 0 ? kin.slice(0, n1).reduce((a, b) => a + b, 0) / sumK : 0; m.top1Flow = sumF > 0 ? fins.slice(0, n1).reduce((a, b) => a + b, 0) / sumF : 0;
+    const topBy = f => nodes.slice().sort((a, b) => f(b) - f(a)).slice(0, 5);
+    this.top = { eig: topBy(n => n.eig), betw: topBy(n => n.betw), broker: topBy(n => n.broker) };
+    /* spatial check: edge length vs random pair distance */
+    let el = 0, en = 0; for (const e of this.edges) { el += Math.hypot(e.s.x - e.t.x, e.s.y - e.t.y); en++; }
+    let rl = 0; for (let i = 0; i < 300; i++) { const a = nodes[mr.int(N)], b = nodes[mr.int(N)]; rl += Math.hypot(a.x - b.x, a.y - b.y); }
+    m.edgeLen = en && rl > 0 ? (el / en) / (rl / 300) : 0;
+    /* correlations for diagnostics */
+    m.spFitDeg = spearman(nodes.map(n => n.fe), nodes.map(n => n.in.length));
+    m.spHoleR = spearman(nodes.map(n => n.hole), nodes.map(n => n.R));
+    const eP = [], eF = []; for (let i = 0; i < this.edges.length; i += Math.max(1, Math.floor(this.edges.length / 3000))) { const e = this.edges[i]; eP.push(Math.max(0, e.dP)); eF.push(e.F); }
+    m.corrGradFlow = pearson(eP, eF);
+    m.corrCongRe = pearson(nodes.map(n => n.congMean), nodes.map(n => n.Re));
+    /* best cluster per node (migration pressure field) */
+    for (const n of nodes) {
+      let best = n.c, U0 = this.utility(n, n.c), bu = U0;
+      for (let c = 0; c < C; c++) if (c !== n.c) { const u = this.utility(n, c); if (u > bu) { bu = u; best = c; } }
+      n.bestC = best; n.dU = bu - U0;
+    }
+    /* node-level anomalies: resource change z-score over last heavy interval */
+    const dR = nodes.map(n => n.R - n.R10), md = mean(dR), sd = std(dR, md) || 1;
+    for (let i = 0; i < N; i++) { nodes[i].anom = Math.abs((dR[i] - md) / sd) > 3.5 ? 1 : 0; nodes[i].R10 = nodes[i].R; }
+    /* critical-slowing trend (Kendall tau of AR1 and variance over last 200 ticks) */
+    const a1 = this.hist.ar1.slice(-200).filter((_, i) => i % 5 === 0), vv = this.hist.varFlow.slice(-200).filter((_, i) => i % 5 === 0);
+    m.tauAR1 = kendallTrend(a1); m.tauVar = kendallTrend(vv);
+    this.classifyPhase();
+    this.diagnose();
+  },
+
+  classifyPhase() {
+    const m = this.m;
+    m.phaseNow = m.lccFrac < 0.5 ? 'FRAGMENTED' : (m.top1Links > 0.2 || m.top1Flow > 0.25 || m.topClusterShare > 0.5) ? 'MONOPOLIZED' : m.turbulence > 0.3 ? 'TURBULENT' : m.congestion > 0.5 ? 'CONGESTED' : 'STABLE';
+  },
+
+  diagnose() {
+    const m = this.m, h = this.hist, sumLast = (k, n) => h[k].slice(-n).reduce((a, b) => a + b, 0);
+    const migs = this.migLog.filter(x => x.t > this.t - 200), mdU = mean(migs.map(x => x.dU));
+    const st = (v, ok, weak) => v ? 'pass' : weak ? 'weak' : 'fail';
+    this.diag = [
+      { name: 'Preferential attachment → heavy-tailed degrees', val: `Hill α=${m.hill.toFixed(2)}, k_max/⟨k⟩=${m.hubRatio.toFixed(1)}`, s: st(m.hubRatio > 5 && m.hill < 4, 0, m.hubRatio > 3), why: 'Hub degree ≫ mean degree with a finite tail exponent' },
+      { name: 'Triadic closure → clustering above random', val: `C=${m.clustering.toFixed(3)} vs C_rand=${(m.avgDeg / Math.max(1, m.N)).toFixed(4)}`, s: st(m.clustering > 5 * m.avgDeg / Math.max(1, m.N), 0, m.clustering > 2 * m.avgDeg / m.N), why: 'Erdős–Rényi expectation is ⟨k⟩/N' },
+      { name: 'Spatial gravity → short edges', val: `edge length / random-pair distance = ${m.edgeLen.toFixed(2)}`, s: st(m.edgeLen < 0.6, 0, m.edgeLen < 0.9), why: 'Ratio < 1 means distance-biased links' },
+      { name: 'Fitness → unequal hubs', val: `Spearman(η_eff, k_in)=${m.spFitDeg.toFixed(2)}`, s: st(m.spFitDeg > 0.2, 0, m.spFitDeg > 0.05), why: 'Fitter nodes accumulate incoming links' },
+      { name: 'Edge decay → pruning & detachment', val: `${sumLast('deaths', 200)} edge deaths / 200 ticks, ${(100 * (m.dormantFrac + m.detachedFrac)).toFixed(1)}% dormant+detached`, s: st(sumLast('deaths', 200) > 0, 0, false), why: 'Links without flow decay and are removed' },
+      { name: 'Pressure gradients → directional flow', val: `corr(ΔP⁺, F)=${m.corrGradFlow.toFixed(2)}`, s: st(m.corrGradFlow > 0.3, 0, m.corrGradFlow > 0.1), why: 'Flow follows P_i − P_j along edge direction' },
+      { name: 'Congestion → turbulence', val: `corr(node congestion, Re)=${m.corrCongRe.toFixed(2)}, turbulent flow ${(100 * m.turbulence).toFixed(1)}%`, s: st(m.corrCongRe > 0.3, 0, m.corrCongRe > 0.1), why: 'Re rises with load relative to capacity' },
+      { name: 'Migration utility → cluster switching', val: `${migs.length} moves / 200 ticks, mean ΔU of movers ${mdU.toFixed(3)}`, s: st(migs.length > 0 && mdU > 0, 0, migs.length > 0), why: 'Movers should on average gain utility' },
+      { name: 'Inequality emerges from similar starts', val: `resource Gini ${this.gini0.toFixed(3)} → ${m.giniR.toFixed(3)}`, s: st(m.giniR - this.gini0 > 0.1, 0, m.giniR - this.gini0 > 0.03), why: 'Initial resources are ~N(5, 0.3)' },
+      { name: 'Targeted hub removal > random failure', val: `LCC kept: random ${(100 * m.resRandom).toFixed(1)}% vs targeted ${(100 * m.resTarget).toFixed(1)}%`, s: st(m.fragility > 0.02, 0, m.fragility > 0), why: 'Removing 10% of nodes, largest-degree first vs uniformly' },
+      { name: 'Structural holes → brokerage advantage', val: `Spearman(hole value, R)=${m.spHoleR.toFixed(2)}, top-5% brokers take ${(100 * m.brokerShare).toFixed(1)}% of inflow`, s: st(m.spHoleR > 0.1 || m.brokerShare > 0.1, 0, m.spHoleR > 0), why: 'Bridging diverse clusters should pay' },
+    ];
+  },
+
+  record() {
+    const h = this.hist, m = this.m;
+    for (const k of HIST_KEYS) h[k].push(m[k] === undefined ? 0 : m[k]);
+    if (h.t.length > 8000) for (const k of HIST_KEYS) h[k].splice(0, 2000);
+  },
+
+  stateHash() {
+    let h = 2166136261 >>> 0; const mix = v => { h ^= v >>> 0; h = Math.imul(h, 16777619) >>> 0; };
+    let sR = 0, sW = 0; for (const n of this.nodes) sR += n.R; for (const e of this.edges) sW += e.w;
+    mix(this.t); mix(this.nodes.length); mix(this.edges.length); mix(Math.round(sR * 1000)); mix(Math.round(sW * 1000)); mix(this.rng.s);
+    return h.toString(16).padStart(8, '0');
+  },
+  log(kind, metric, value, z, note) {
+    const ev = { t: this.t, kind, metric, value, z, note, hash: this.stateHash() };
+    this.events.push(ev); if (this.events.length > 3000) this.events.splice(0, 500);
+    return ev;
+  },
+
+  detect() {
+    const t = this.t, p = this.p, h = this.hist, m = this.m, f = this.flags;
+    this.trackShocks();
+    if (t < 80) return;
+    const n = h.t.length;
+    for (const [k, every, up, down] of ANOM_KEYS) {
+      if (every > 1 && t % 10) continue;
+      const W = Math.max(6, Math.floor(p.zWin / every)); if (n < W * every + 1) continue;
+      const vals = []; for (let j = 1; j <= W; j++) vals.push(h[k][n - 1 - j * every]);
+      const mu = mean(vals), sd = Math.max(std(vals, mu), 1e-6 + Math.abs(mu) * 0.02), x = h[k][n - 1], z = (x - mu) / sd;
+      if (Math.abs(z) > p.zThr && t - (f['z_' + k] || -1e9) > 40) {
+        const note = z > 0 ? up : down; if (!note) continue;
+        f['z_' + k] = t; this.log('anomaly', k, x, z, note);
+      }
+    }
+    if (t % 10) return;
+    const ago = (k, d) => { const i = n - 1 - d; return i >= 0 ? h[k][i] : h[k][0]; };
+    const once = (key, gap) => { if (t - (f[key] || -1e9) < gap) return false; f[key] = t; return true; };
+    /* regime (phase) change with 2-sample hysteresis */
+    if (m.phaseNow !== this.phase) {
+      if (this.phaseCand === m.phaseNow) this.phaseHold++; else { this.phaseCand = m.phaseNow; this.phaseHold = 1; }
+      if (this.phaseHold >= 2) { this.log('regime', 'phase', 0, 0, `${this.phase} → ${m.phaseNow}: ${PHASE_INFO[m.phaseNow]}`); this.phase = m.phaseNow; }
+    } else this.phaseHold = 0;
+    for (const cl of this.clusters) {
+      if (cl.meanR < p.stressThr && cl.members > 5) { if (cl.lowTicks === 0) cl.lowOut = 0; cl.lowTicks += 10; } else cl.lowTicks = 0;
+      if (t >= 150 && cl.lowTicks >= 150 && cl.lowOut < 0.05 * cl.members && once('trap' + cl.id, 400)) this.log('pattern', 'meanR', cl.meanR, 0, `Poverty trap: ${cl.name} mean resource ${cl.meanR.toFixed(2)} < stress threshold for ${cl.lowTicks} ticks with only ${cl.lowOut} out-migrants`);
+      if (!cl.uReached && cl.meanU > 0.1) { cl.uReached = true; this.log('pattern', 'meanU', cl.meanU, 0, `Innovation front reached ${cl.name}` + (this.innovOrigin !== undefined ? ` (origin ${this.clusters[this.innovOrigin].name})` : '')); }
+      else if (cl.uReached && cl.meanU < 0.03) cl.uReached = false;
+    }
+    if (t < 250) return; // structural pattern detectors compare against t−100, so skip the start-up transient
+    if (m.richClub > 3 && m.richClub > 1.3 * ago('richClub', 100) && once('rich', 200)) this.log('pattern', 'richClub', m.richClub, 0, `Rich-club formation: high-degree nodes interlinking ${m.richClub.toFixed(1)}× above density`);
+    if (m.modularity - ago('modularity', 100) > 0.05 && m.crossFlow < 0.8 * ago('crossFlow', 100) && once('echo', 200)) this.log('pattern', 'modularity', m.modularity, 0, `Echo chamber: modularity +${(m.modularity - ago('modularity', 100)).toFixed(3)} while cross-cluster flow fell to ${(100 * m.crossFlow).toFixed(1)}%`);
+    if (m.brokerShare > 0.25 && m.brokerShare > 1.2 * ago('brokerShare', 100) && once('broker', 200)) this.log('pattern', 'brokerShare', m.brokerShare, 0, `Structural-hole exploitation: top 5% brokers capture ${(100 * m.brokerShare).toFixed(1)}% of inflow`);
+    if (m.meanTrust < 0.75 * ago('meanTrust', 100) && m.meanA > 2 && once('spam', 250)) this.log('pattern', 'meanTrust', m.meanTrust, 0, `Spam collapse: mean application volume ${m.meanA.toFixed(1)} while trust fell ${(100 * (1 - m.meanTrust / ago('meanTrust', 100))).toFixed(0)}%`);
+    if ((m.top1Links > 0.2 || m.top1Flow > 0.25 || m.topClusterShare > 0.5) && once('mono', 300)) {
+      const top = this.clusters.reduce((a, b) => b.flowShare > a.flowShare ? b : a);
+      this.log('pattern', 'top1Links', m.top1Links, 0, m.topClusterShare > 0.5 ? `Cluster monopoly: ${top.name} absorbs ${(100 * top.flowShare).toFixed(1)}% of flow` : `Platform monopoly: top 1% of nodes hold ${(100 * m.top1Links).toFixed(1)}% of incoming links and ${(100 * m.top1Flow).toFixed(1)}% of inflow`);
+    }
+    if (m.tauAR1 > 0.5 && m.tauVar > 0.3 && once('csd', 300)) this.log('pattern', 'ar1', m.ar1, 0, `Critical slowing down: rising autocorrelation (τ=${m.tauAR1.toFixed(2)}) and variance (τ=${m.tauVar.toFixed(2)}) in total flow — early warning`);
+    if (m.cascade >= Math.max(5, 0.01 * m.N) && once('casc', 60)) this.log('pattern', 'cascade', m.cascade, 0, `Cascade: ${m.cascade} failures adjacent to earlier failures within 10 ticks`);
+  },
+
+  /* ---------------- shocks (applied live) ---------------- */
+  beginShock(name) {
+    this.shocks.push({ t0: this.t, name, pre: { thr: this.m.throughput, flow: this.m.totalFlow, lcc: this.m.lccFrac * this.m.N, N: this.m.N }, fail0: this.failTotal, rec: null, done: 0 });
+    this.log('shock', 'shock', 0, 0, name);
+  },
+  trackShocks() {
+    for (const s of this.shocks) {
+      if (s.done >= 2) continue; const dt = this.t - s.t0;
+      if (s.rec === null && dt > 2 && this.m.throughput >= 0.9 * s.pre.thr) s.rec = dt;
+      if ((dt === 60 && s.done === 0) || (dt === 200 && s.done === 1)) {
+        s.done++; const lcc = this.m.lccFrac * this.m.N;
+        this.log('recovery', 'shock', 0, 0, `${s.name} +${dt}t: output ${(100 * this.m.throughput / Math.max(1e-9, s.pre.thr)).toFixed(0)}% of pre-shock, LCC ${(100 * lcc / Math.max(1, s.pre.lcc)).toFixed(0)}%, ${this.failTotal - s.fail0} failures, recovery time ${s.rec === null ? 'not yet' : s.rec + ' ticks'}`);
+      }
+    }
+  },
+  applyShock(key) {
+    const p = this.p, r = this.rng, N = this.nodes.length, def = SHOCKS[key]; if (!def) return;
+    this.beginShock(def.label);
+    const byDeg = () => this.nodes.slice().sort((a, b) => b.deg - a.deg);
+    switch (key) {
+      case 'automation':
+        p.automation = Math.min(0.6, p.automation + 0.2);
+        for (const cl of this.clusters) { for (let k = 0; k < SK; k++) cl.demand[k] = 0.5 * cl.demand[k] + (k >= SK - 2 ? 0.7 : 0); normalize(cl.demand); }
+        break;
+      case 'leverage': for (const n of this.nodes) if (r.next() < 0.2) n.levU = -1; p.leverage = Math.max(p.leverage, 0.0001); if (p.leverageMult < 10) p.leverageMult = 10; break;
+      case 'demandShift': for (const cl of this.clusters) { for (let k = 0; k < SK; k++) cl.demand[k] = Math.abs(r.normal()) * 0.5 + (k === r.int(SK) ? 1.2 : 0); normalize(cl.demand); } break;
+      case 'contraction': p.wageMult *= 0.6; p.capLimit *= 0.6; for (const n of this.nodes) n.R *= 0.7; break;
+      case 'collapse': { const cl = this.clusters.reduce((a, b) => b.members > a.members ? b : a); cl.wAdj *= 0.2; for (const n of cl.list) if (n.alive) n.R *= 0.5; this.log('shock', 'cluster', 0, 0, `collapse hits ${cl.name}`); break; }
+      case 'randomFail': { const k = Math.floor(N * 0.05); for (let i = 0; i < k; i++) this.removeNode(this.nodes[r.int(N)]); break; }
+      case 'targeted': { const s = byDeg(); for (let i = 0; i < Math.floor(N * 0.05); i++) this.removeNode(s[i]); break; }
+      case 'topHub': { const h = byDeg()[0]; if (h) { for (const m of h.nb) m.R *= 0.5; this.removeNode(h); this.log('shock', 'node', h.id, 0, `removed hub #${h.id} (degree ${h.deg})`); } break; }
+      case 'injection': for (const n of this.nodes) n.R += 5; break;
+      case 'poorInjection': { const s = this.nodes.slice().sort((a, b) => a.R - b.R); for (let i = 0; i < Math.floor(N * 0.2); i++) { s[i].R += 10; if (s[i].state === 'dormant') s[i].state = 'active'; } break; }
+      case 'innovation': { const n = r.pick(this.nodes); if (n) { this.injectInnovation(n, true); p.adoption = Math.max(p.adoption, 0.04); } break; }
+    }
+    this.rebuild();
+  },
+
+  /* ---------------- serialisation ---------------- */
+  toState() {
+    return {
+      format: 'adaptive-society-lab', v: 1, seed: this.seed, t: this.t, rng: this.rng.s, nextId: this.nextId, growthAcc: this.growthAcc, gini0: this.gini0,
+      params: { ...this.p }, phase: this.phase, flags: this.flags, failTotal: this.failTotal, innovOrigin: this.innovOrigin,
+      clusters: this.clusters.map(c => ({ id: c.id, cx: c.cx, cy: c.cy, z: c.z, visc: c.visc, wAdj: c.wAdj, cAdj: c.cAdj, demand: [...c.demand], lowTicks: c.lowTicks, lowOut: c.lowOut, outMig: c.outMig, inMig: c.inMig, uReached: c.uReached })),
+      hubWin: this.hubWin, meanR: this.meanR,
+      nodes: this.nodes.map(n => ({ id: n.id, x: n.x, y: n.y, vx: n.vx, vy: n.vy, c: n.c, fit: n.fit, skill: [...n.skill], R: n.R, u: n.u, mob: n.mob, levU: n.levU, trustThr: n.trustThr,
+        state: n.state, stressTicks: n.stressTicks, dormantTicks: n.dormantTicks, dormantAt: n.dormantAt, frozen: n.frozen, moves: n.moves, born: n.born, mem: [...n.mem], memI: n.memI, R10: n.R10, A: n.A, emp: n.emp, hole: n.hole, lastMove: n.lastMove })),
+      edges: this.edges.map(e => [e.s.id, e.t.id, e.w, e.trust, e.type, e.age, e.low, e.over, e.born, e.F, e.cong]),
+      hist: this.hist, events: this.events,
+    };
+  },
+});
+Sim.fromState = function (o) {
+  const p = Object.assign(defaultParams(), o.params), s = new Sim(p, o.seed, { empty: true });
+  s.t = o.t; s.rng.s = o.rng; s.nextId = o.nextId; s.growthAcc = o.growthAcc; s.gini0 = o.gini0 || 0; s.phase = o.phase || 'STABLE';
+  s.flags = o.flags || {}; s.failTotal = o.failTotal || 0; s.innovOrigin = o.innovOrigin;
+  s.clusters = o.clusters.map(c => Object.assign(s.makeCluster(c.id, c.cx, c.cy, c.z, c.visc, Float64Array.from(c.demand)), { wAdj: c.wAdj, cAdj: c.cAdj, lowTicks: c.lowTicks, lowOut: c.lowOut, outMig: c.outMig, inMig: c.inMig, uReached: c.uReached }));
+  const byId = new Map();
+  for (const d of o.nodes) {
+    const n = s.createNode(d.c, d.x, d.y); s.nextId = o.nextId;
+    Object.assign(n, d, { skill: Float64Array.from(d.skill), mem: Float32Array.from(d.mem), alive: true, out: [], in: [], nb: [] });
+    byId.set(n.id, n);
+  }
+  for (const a of o.edges) { const e = s.addEdge(byId.get(a[0]), byId.get(a[1]), a[2], a[3], a[4], true); if (e) { e.age = a[5]; e.low = a[6]; e.over = a[7]; e.born = a[8]; e.F = a[9] || 0; e.cong = a[10] || 0; } }
+  if (o.hist) for (const k of HIST_KEYS) s.hist[k] = o.hist[k] || [];
+  s.events = o.events || [];
+  s.rebuild(); s.clusterAggregates(); s.economy(); s.flow(); s.lightMetrics(); s.heavyMetrics();
+  for (const d of o.nodes) { const n = byId.get(d.id); n.A = d.A; n.emp = d.emp; n.hole = d.hole; n.R10 = d.R10; }
+  s.edges.forEach((e, i) => { e.F = o.edges[i][9] || 0; e.cong = o.edges[i][10] || 0; });
+  s.rng.s = o.rng; s.hubWin = o.hubWin ?? 1e9; s.meanR = o.meanR ?? 0; // recomputation above must not advance the model RNG
+  return s;
+};
+
+/* ---------------- scenarios ---------------- */
+const PRESETS = {
+  baseline: { label: 'Baseline', desc: 'Moderate growth, attachment and migration; balanced clusters.', params: {} },
+  highCost: { label: 'High-cost hub cluster', desc: 'Metro pays 2.4× wages at ~4× cost. Fit nodes survive; others detach or migrate.', params: {}, after(s) { const c = s.clusters[0]; c.wAdj = 2.4 / Math.max(0.2, 1 + s.p.oppVar * c.z); c.cAdj = 3.2; } },
+  monopoly: { label: 'Platform monopoly', desc: 'Strong preferential attachment and hub pull; one cluster is low-friction.', params: { alpha: 1.8, fitMult: 1.8, pressSens: 1.8, brokerBonus: 0.2 }, after(s) { s.clusters[0].visc = 0.25; for (const n of s.clusters[0].list) n.fit *= 1.3; } },
+  viscous: { label: 'Institutional viscosity', desc: 'High migration cost, high friction, slow edge formation.', params: { viscosity: 3, migCost: 8, edgeRate: 0.012, mobility: 0.004 } },
+  lowFriction: { label: 'Low-friction platform economy', desc: 'Low viscosity and distance friction, fast linking, 30% leveraged nodes.', params: { viscosity: 0.25, migCost: 1, gamma: 0.3, edgeRate: 0.06, leverage: 0.3, leverageMult: 6 } },
+  remote: { label: 'Remote work', desc: 'Distance friction near zero; long-distance edges persist through moves.', params: { gamma: 0.2, remote: 0.9, retention: 0.9 } },
+  massApp: { label: 'Mass application', desc: '30% of nodes apply 25× more with diluted signal. Watch receptivity and trust.', params: { leverage: 0.3, leverageMult: 25, signalQuality: 0.45 } },
+  diffusion: { label: 'Innovation diffusion', desc: 'One seeded innovation with logistic adoption (κ > λ_u): watch the front cross brokers.', params: { adoption: 0.04, innovRate: 0, diffD: 0.3 }, after(s) { s.injectInnovation(s.nodes[s.rng.int(s.nodes.length)], true); } },
+};
+const SHOCKS = {
+  automation: { label: 'Automation shock', desc: 'Automation +0.2 and all demand vectors shift toward technical skills.' },
+  leverage: { label: 'Algorithmic leverage', desc: '20% of nodes gain application leverage (≥10×).' },
+  demandShift: { label: 'Skill demand shift', desc: 'All cluster demand vectors re-drawn at random.' },
+  contraction: { label: 'Financial contraction', desc: 'Wages ×0.6, edge capacity ×0.6, reserves ×0.7.' },
+  collapse: { label: 'Cluster collapse', desc: 'Largest cluster wages ×0.2 and member reserves halved.' },
+  randomFail: { label: 'Random failure 5%', desc: 'Remove 5% of nodes uniformly at random.' },
+  targeted: { label: 'Targeted attack 5%', desc: 'Remove the 5% highest-degree nodes.' },
+  topHub: { label: 'Remove top hub', desc: 'Remove the single largest hub; its neighbours lose half their reserves.' },
+  injection: { label: 'Universal injection', desc: '+5 resource to every node.' },
+  poorInjection: { label: 'Inject poorest 20%', desc: '+10 resource to the poorest fifth (revives dormant).' },
+  innovation: { label: 'Seed innovation', desc: 'u = 1 at a random node, adoption gain raised to ≥ 0.04.' },
+};
+/* =====================================================================
+   RENDERER (Canvas 2D, batched by colour, level-of-detail aware)
+   ===================================================================== */
+const EDGE_CLASSES = [
+  { name: 'decaying', color: '#5a6478' }, { name: 'overloaded F/C>1', color: '#ff4d4d' },
+  { name: 'congested F/C>0.7', color: '#fab219' }, { name: 'bridge', color: '#b18cff' },
+  { name: 'growing', color: '#34d058' }, { name: 'laminar flow', color: '#22d3ee' }, { name: 'idle', color: '#2c4a6e' },
+];
+const STATE_COLORS = { active: '#22d3ee', hub: '#e879f9', stressed: '#fab219', dormant: '#56607a', detached: '#8a94a8' };
+const SEQ = ['#104281', '#184f95', '#1c5cab', '#256abf', '#2a78d6', '#3987e5', '#5598e7', '#86b6ef', '#cde2fb']; // dark → bright on dark surface
+const DIV = ['#2a78d6', '#5598e7', '#86b6ef', '#b7c6db', '#383835', '#e8a3a3', '#e66767', '#d94a4a', '#c23030']; // low ↔ high pressure
+const hexRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const SEQ_RGB = SEQ.map(hexRgb), DIV_RGB = DIV.map(hexRgb);
+
+function edgeClass(e) {
+  if (e.low > 0 || e.trust < 0.15 || e.s.state === 'dormant' || e.t.state === 'dormant') return 0;
+  if (e.cong > 1) return 1;
+  if (e.cong > 0.7) return 2;
+  if (e.s.c !== e.t.c && e.F > 1e-6) return 3;
+  if (e.dw > 0 && e.age < 80) return 4;
+  if (e.F > 1e-6) return 5;
+  return 6;
+}
+
+class Renderer {
+  constructor(cv) {
+    this.cv = cv; this.ctx = cv.getContext('2d'); this.cam = { x: 0, y: 0, z: 0.8 }; this.parts = []; this.time = 0; this.lod = 0;
+    this.o = { colorBy: 'cluster', sizeBy: 'wdeg', edges: true, curved: false, particles: true, halos: true, hulls: true, labels: true, arrows: true, heat: 'none', vec: 'none', anom: false };
+    this.sel = null; this.selEdge = null; this.hover = null; this.hoverEdge = null; this.path = null; this.flowPath = null; this.pendingSrc = null;
+    this.heatCv = document.createElement('canvas'); this.flowT = -1; this.hullT = -1; this.hulls = [];
+    this.buckets = Array.from({ length: EDGE_CLASSES.length * 9 }, () => []);
+    this.resize();
+  }
+  resize() {
+    this.dpr = Math.min(2, window.devicePixelRatio || 1); this.W = window.innerWidth; this.H = window.innerHeight;
+    this.cv.width = Math.round(this.W * this.dpr); this.cv.height = Math.round(this.H * this.dpr);
+    this.cv.style.width = this.W + 'px'; this.cv.style.height = this.H + 'px';
+  }
+  s2w(sx, sy) { return [(sx - this.W / 2) / this.cam.z + this.cam.x, (sy - this.H / 2) / this.cam.z + this.cam.y]; }
+  w2s(x, y) { return [(x - this.cam.x) * this.cam.z + this.W / 2, (y - this.cam.y) * this.cam.z + this.H / 2]; }
+  fit(sim, view) {
+    if (!sim.nodes.length) return; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const n of sim.nodes) { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y); }
+    const v = view || { l: 0, r: this.W, t: 0, b: this.H }, vw = Math.max(200, v.r - v.l), vh = Math.max(200, v.b - v.t);
+    this.cam.z = clamp(Math.min(vw / (x1 - x0 + 120), vh / (y1 - y0 + 120)), 0.08, 6);
+    const cxs = (v.l + v.r) / 2, cys = (v.t + v.b) / 2;
+    this.cam.x = (x0 + x1) / 2 - (cxs - this.W / 2) / this.cam.z; this.cam.y = (y0 + y1) / 2 - (cys - this.H / 2) / this.cam.z;
+  }
+  reset() { this.parts = []; this.sel = null; this.selEdge = null; this.hover = null; this.path = null; this.flowPath = null; this.flowT = -1; this.hullT = -1; }
+
+  nodeRadius(n, sim) {
+    switch (this.o.sizeBy) {
+      case 'resource': return 1.6 + 0.55 * Math.sqrt(Math.max(0, n.R));
+      case 'centrality': return 1.6 + 9 * n.eig;
+      case 'broker': return 1.6 + 7 * n.hole;
+      case 'betweenness': return 1.6 + 10 * Math.sqrt(n.betw);
+      default: return 1.6 + 1.25 * Math.sqrt(n.win + n.wout);
+    }
+  }
+  nodeValue(n, mode, sim) {
+    switch (mode) {
+      case 'fitness': return n.fe; case 'resource': return n.R; case 'innovation': return n.u; case 'pressure': return n.P;
+      case 'deficit': return Math.max(0, sim.p.stressThr - n.R) / Math.max(1e-9, sim.p.stressThr); case 'congestion': return n.congMean;
+      case 'turbulence': return n.Re / sim.p.reCrit; default: return 0;
+    }
+  }
+  scaleFor(mode, sim) { // robust range (5th–95th pct) for continuous encodings
+    const vals = sim.nodes.map(n => this.nodeValue(n, mode, sim)).sort((a, b) => a - b); if (!vals.length) return [0, 1];
+    const lo = vals[Math.floor(vals.length * 0.05)], hi = vals[Math.floor(vals.length * 0.95)];
+    if (mode === 'innovation' || mode === 'deficit') return [0, Math.max(1e-6, Math.max(hi, mode === 'innovation' ? 1 : hi))];
+    return [lo, hi > lo ? hi : lo + 1e-6];
+  }
+
+  draw(sim, dt, playing) {
+    const ctx = this.ctx, z = this.cam.z, W = this.W, H = this.H, dpr = this.dpr;
+    this.time += dt / 1000;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    ctx.fillStyle = '#070a12'; ctx.fillRect(0, 0, W, H);
+    const [vx0, vy0] = this.s2w(-40, -40), [vx1, vy1] = this.s2w(W + 40, H + 40);
+    this.view = { x0: vx0, y0: vy0, x1: vx1, y1: vy1 };
+    if (this.o.heat !== 'none') this.drawHeat(sim);
+    ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (W / 2 - this.cam.x * z), dpr * (H / 2 - this.cam.y * z));
+    if (this.o.hulls) this.drawHulls(sim);
+    const focus = this.sel && this.sel.alive ? this.sel : null;
+    if (this.o.edges) this.drawEdges(sim, focus);
+    this.drawGhosts(sim);
+    if (this.o.particles && this.lod < 3) this.drawParticles(sim, dt, playing);
+    this.drawNodes(sim, focus);
+    if (this.o.vec !== 'none') this.drawVectors(sim);
+    this.drawSelection(sim);
+    if (this.o.anom) this.drawAnomalies(sim);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    if (this.o.hulls) this.drawHullLabels(sim);
+    if (this.o.labels && z > 2.2) this.drawNodeLabels(sim);
+  }
+  inView(x, y, pad) { const v = this.view; return x > v.x0 - pad && x < v.x1 + pad && y > v.y0 - pad && y < v.y1 + pad; }
+  ctrl(e) { const s = e.s, t = e.t; return [(s.x + t.x) / 2 - (t.y - s.y) * 0.12, (s.y + t.y) / 2 + (t.x - s.x) * 0.12]; }
+
+  drawEdges(sim, focus) {
+    const ctx = this.ctx, z = this.cam.z, v = this.view, B = this.buckets, maxF = sim.m.maxFlow || 1e-9;
+    for (const b of B) b.length = 0;
+    const curved = this.o.curved && this.lod === 0 && sim.edges.length < 12000;
+    const minW = this.lod >= 2 ? 0.35 : z < 0.3 ? 0.12 : 0, onlyFlow = this.lod >= 3;
+    let visible = 0; const flashes = [];
+    for (const e of sim.edges) {
+      if (e.dead) continue; const s = e.s, t = e.t;
+      if ((s.x < v.x0 && t.x < v.x0) || (s.x > v.x1 && t.x > v.x1) || (s.y < v.y0 && t.y < v.y0) || (s.y > v.y1 && t.y > v.y1)) continue;
+      if (e.w < minW && e.F < maxF * 0.1) continue; if (onlyFlow && e.F <= 0) continue;
+      const cls = edgeClass(e), fr = e.F / maxF, al = fr > 0.3 ? 2 : fr > 0.04 ? 1 : 0, wl = e.w > 1.5 ? 2 : e.w > 0.5 ? 1 : 0;
+      B[cls * 9 + al * 3 + wl].push(e); visible++; if (e.flash > 0) flashes.push(e);
+    }
+    this.visibleEdges = visible;
+    ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    const dim = focus ? 0.35 : 1, pulse = 0.6 + 0.4 * Math.sin(this.time * 9);
+    for (let i = 0; i < B.length; i++) {
+      const list = B[i]; if (!list.length) continue;
+      const cls = Math.floor(i / 9), al = Math.floor(i / 3) % 3, wl = i % 3;
+      ctx.strokeStyle = EDGE_CLASSES[cls].color;
+      ctx.globalAlpha = [0.1, 0.3, 0.7][al] * (cls === 1 ? pulse : 1) * (cls === 0 ? 0.7 : 1) * dim;
+      ctx.lineWidth = [0.55, 1.1, 2.1][wl] / Math.pow(z, 0.85);
+      ctx.beginPath();
+      for (const e of list) {
+        ctx.moveTo(e.s.x, e.s.y);
+        if (curved) { const [cx, cy] = this.ctrl(e); ctx.quadraticCurveTo(cx, cy, e.t.x, e.t.y); } else ctx.lineTo(e.t.x, e.t.y);
+      }
+      ctx.stroke();
+    }
+    if (flashes.length) { // newly formed edges flash white
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.3 / z;
+      for (const e of flashes) { ctx.globalAlpha = 0.06 * e.flash; ctx.beginPath(); ctx.moveTo(e.s.x, e.s.y); ctx.lineTo(e.t.x, e.t.y); ctx.stroke(); }
+    }
+    if (this.o.arrows && z > 1.4 && visible < 5000) { // direction markers
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 0.55; ctx.fillStyle = '#c3c2b7'; ctx.beginPath();
+      const a = 4 / z;
+      for (const list of B) for (const e of list) {
+        const s = e.s, t = e.t, dx = t.x - s.x, dy = t.y - s.y, L = Math.hypot(dx, dy); if (L < 12 / z) continue;
+        const ux = dx / L, uy = dy / L; let px = t.x - ux * (L * 0.22), py = t.y - uy * (L * 0.22);
+        if (curved) { const [cx, cy] = this.ctrl(e), q = 0.78; px = (1 - q) * (1 - q) * s.x + 2 * (1 - q) * q * cx + q * q * t.x; py = (1 - q) * (1 - q) * s.y + 2 * (1 - q) * q * cy + q * q * t.y; }
+        ctx.moveTo(px + ux * a, py + uy * a); ctx.lineTo(px - ux * a - uy * a * 0.6, py - uy * a + ux * a * 0.6); ctx.lineTo(px - ux * a + uy * a * 0.6, py - uy * a - ux * a * 0.6); ctx.closePath();
+      }
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+  drawGhosts(sim) { // pruned edges dissolve
+    const ctx = this.ctx; if (sim.ghosts.length) { this.ghosts = (this.ghosts || []).concat(sim.ghosts); sim.ghosts.length = 0; }
+    if (!this.ghosts || !this.ghosts.length) return;
+    ctx.strokeStyle = '#8a94a8'; ctx.lineWidth = 0.8 / this.cam.z;
+    for (const g of this.ghosts) { ctx.globalAlpha = 0.35 * g.life; ctx.beginPath(); ctx.moveTo(g.x1, g.y1); ctx.lineTo(g.x2, g.y2); ctx.stroke(); g.life -= 0.04; }
+    this.ghosts = this.ghosts.filter(g => g.life > 0).slice(-400); ctx.globalAlpha = 1;
+  }
+  drawParticles(sim, dt, playing) {
+    const ctx = this.ctx, z = this.cam.z, P = this.parts, p = sim.p;
+    if (sim.t !== this.flowT) { // cumulative flow for F-proportional spawning
+      const list = [], cum = []; let s = 0; for (const e of sim.edges) if (e.F > 1e-6 && !e.dead) { s += e.F; list.push(e); cum.push(s); }
+      this.flowList = list; this.flowCum = cum; this.flowTot = s; this.flowT = sim.t;
+    }
+    const cap = [4000, 2000, 800, 0][this.lod], budget = Math.min(cap - P.length, playing ? 90 : 25);
+    for (let i = 0; i < budget && this.flowTot > 0; i++) {
+      const x = Math.random() * this.flowTot, c = this.flowCum; let lo = 0, hi = c.length - 1;
+      while (lo < hi) { const m = (lo + hi) >> 1; if (c[m] > x) hi = m; else lo = m + 1; }
+      const e = this.flowList[lo]; P.push({ e, u: 0, sp: 0.006 + 0.022 * Math.min(1.5, e.cong), ph: Math.random() * 6.283 });
+    }
+    const curved = this.o.curved && this.lod === 0 && sim.edges.length < 12000, k = dt / 16.7, h = 1.1 / z;
+    const groups = Array.from({ length: EDGE_CLASSES.length }, () => []);
+    for (let i = P.length - 1; i >= 0; i--) {
+      const q = P[i]; q.u += q.sp * k;
+      if (q.u >= 1 || q.e.dead) { P[i] = P[P.length - 1]; P.pop(); continue; }
+      const e = q.e, s = e.s, t = e.t, u = q.u; let x, y;
+      if (curved) { const [cx, cy] = this.ctrl(e); x = (1 - u) * (1 - u) * s.x + 2 * (1 - u) * u * cx + u * u * t.x; y = (1 - u) * (1 - u) * s.y + 2 * (1 - u) * u * cy + u * u * t.y; }
+      else { x = s.x + (t.x - s.x) * u; y = s.y + (t.y - s.y) * u; }
+      if (!this.inView(x, y, 0)) continue;
+      const tb = Math.max(s.Re, t.Re) / p.reCrit; // turbulence → jittered paths
+      if (tb > 1) { const L = Math.hypot(t.x - s.x, t.y - s.y) || 1, amp = Math.min(7, (tb - 1) * 3.5) / z, j = Math.sin(this.time * 23 + q.ph) * amp * (0.5 + Math.random() * 0.5); x += -(t.y - s.y) / L * j; y += (t.x - s.x) / L * j; }
+      groups[edgeClass(e)].push(x, y);
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    for (let c = 0; c < groups.length; c++) {
+      const g = groups[c]; if (!g.length) continue; ctx.fillStyle = c === 6 || c === 0 ? '#9fb3cc' : EDGE_CLASSES[c].color; ctx.globalAlpha = 0.9;
+      for (let i = 0; i < g.length; i += 2) ctx.fillRect(g[i] - h, g[i + 1] - h, 2 * h, 2 * h);
+    }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+  drawNodes(sim, focus) {
+    const ctx = this.ctx, z = this.cam.z, mode = this.o.colorBy, rs = Math.pow(z, -0.3);
+    let scale = null; if (mode !== 'cluster' && mode !== 'state' && mode !== 'community') scale = this.scaleFor(mode, sim);
+    const groups = new Map(), halos = [];
+    let Pm = 0, Ps = 1; if (this.o.halos && this.lod < 2) { const ps = sim.nodes.map(n => n.P); Pm = mean(ps); Ps = std(ps, Pm) || 1; }
+    const egoSet = focus ? new Set([focus, ...focus.nb]) : null;
+    for (const n of sim.nodes) {
+      if (!n.alive || !this.inView(n.x, n.y, 20)) continue;
+      let col;
+      if (mode === 'cluster') col = CL_COLORS[n.c]; else if (mode === 'state') col = STATE_COLORS[n.state];
+      else if (mode === 'community') col = CL_COLORS[n.comm % 8];
+      else { const v = clamp((this.nodeValue(n, mode, sim) - scale[0]) / (scale[1] - scale[0]), 0, 1); col = mode === 'pressure' ? DIV[Math.round(v * 8)] : SEQ[Math.round(v * 8)]; }
+      let alpha = n.state === 'dormant' ? 0.3 : n.state === 'stressed' ? (0.55 + 0.3 * Math.sin(this.time * 6 + n.id)) : n.state === 'detached' ? 0.55 : 1;
+      if (egoSet && !egoSet.has(n)) alpha *= 0.3;
+      const aq = Math.round(alpha * 5), key = col + '|' + aq, r = this.nodeRadius(n, sim) * rs;
+      let g = groups.get(key); if (!g) groups.set(key, g = { col, a: aq / 5, list: [] }); g.list.push(n.x, n.y, r);
+      if (this.o.halos && this.lod < 2) { const hs = n.state === 'hub' ? 1 : clamp(((n.P - Pm) / Ps - 1.5) / 2, 0, 1); if (hs > 0.05) halos.push(n.x, n.y, r, hs, col); }
+    }
+    if (halos.length) { // pressure / hub halos
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < halos.length; i += 5) { ctx.globalAlpha = 0.16 * halos[i + 3]; ctx.fillStyle = halos[i + 4]; ctx.beginPath(); ctx.arc(halos[i], halos[i + 1], halos[i + 2] * 2.8, 0, 6.283); ctx.fill(); }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    for (const g of groups.values()) {
+      ctx.globalAlpha = g.a; ctx.fillStyle = g.col; ctx.beginPath(); const L = g.list;
+      for (let i = 0; i < L.length; i += 3) { ctx.moveTo(L[i] + L[i + 2], L[i + 1]); ctx.arc(L[i], L[i + 1], L[i + 2], 0, 6.283); }
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (z > 0.7) { // hub rings and frozen markers
+      ctx.lineWidth = 1 / z; ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath();
+      for (const n of sim.nodes) if ((n.state === 'hub' || n.frozen) && this.inView(n.x, n.y, 20)) { const r = this.nodeRadius(n, sim) * rs + 1.5 / z; ctx.moveTo(n.x + r, n.y); ctx.arc(n.x, n.y, r, 0, 6.283); }
+      ctx.stroke();
+    }
+  }
+  computeHulls(sim) {
+    if (this.hullT === sim.t) return; this.hullT = sim.t; this.hulls = [];
+    const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    for (const cl of sim.clusters) {
+      const pts = [], lim = (cl.radius * 1.5) ** 2; // hull of the cluster core (bridging outliers excluded)
+      for (const n of sim.nodes) if (n.c === cl.id && n.state !== 'dormant' && n.state !== 'detached' && (n.x - cl.cx) ** 2 + (n.y - cl.cy) ** 2 < lim) pts.push([n.x, n.y]);
+      if (pts.length < 3) { this.hulls.push(null); continue; }
+      pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]); const lo = [], up = [];
+      for (const q of pts) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+      for (let i = pts.length - 1; i >= 0; i--) { const q = pts[i]; while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+      up.pop(); lo.pop(); this.hulls.push(lo.concat(up));
+    }
+  }
+  drawHulls(sim) {
+    this.computeHulls(sim); const ctx = this.ctx, z = this.cam.z;
+    ctx.lineWidth = 1 / z; ctx.setLineDash([4 / z, 4 / z]);
+    sim.clusters.forEach((cl, i) => {
+      const h = this.hulls[i]; if (!h) return; ctx.beginPath(); ctx.moveTo(h[0][0], h[0][1]); for (const q of h) ctx.lineTo(q[0], q[1]); ctx.closePath();
+      ctx.globalAlpha = 0.045; ctx.fillStyle = CL_COLORS[i]; ctx.fill(); ctx.globalAlpha = 0.35; ctx.strokeStyle = CL_COLORS[i]; ctx.stroke();
+    });
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+  drawHullLabels(sim) {
+    const ctx = this.ctx; ctx.font = '600 11px system-ui, sans-serif'; ctx.textBaseline = 'bottom';
+    sim.clusters.forEach((cl, i) => {
+      const h = this.hulls[i]; let top = null; if (h) for (const q of h) if (!top || q[1] < top[1]) top = q;
+      const [sx, sy] = top ? this.w2s(top[0], top[1]) : this.w2s(cl.cx, cl.cy - cl.radius);
+      const txt = `${cl.name}  ${cl.members}`, sub = `wage ${cl.wage.toFixed(2)} · cost ${cl.cost.toFixed(2)} · R̄ ${cl.meanR.toFixed(1)}`;
+      ctx.font = '10px ui-monospace, Menlo, monospace'; const bw = Math.max(ctx.measureText(sub).width, 60) + 12; ctx.font = '600 11px system-ui, sans-serif';
+      ctx.globalAlpha = 0.72; ctx.fillStyle = '#070a12'; ctx.fillRect(sx - bw / 2, sy - 30, bw, 30);
+      ctx.globalAlpha = 0.95; ctx.fillStyle = CL_COLORS[i]; ctx.beginPath(); ctx.arc(sx - ctx.measureText(txt).width / 2 - 8, sy - 20, 3.5, 0, 6.283); ctx.fill();
+      ctx.textAlign = 'center'; ctx.fillStyle = '#e8edf5'; ctx.fillText(txt, sx, sy - 14);
+      ctx.font = '10px ui-monospace, Menlo, monospace'; ctx.fillStyle = '#8b95a7'; ctx.fillText(sub, sx, sy - 3); ctx.font = '600 11px system-ui, sans-serif';
+    });
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+  drawNodeLabels(sim) {
+    const ctx = this.ctx; ctx.font = '10px ui-monospace, Menlo, monospace'; ctx.fillStyle = '#a9b3c4'; ctx.textBaseline = 'middle';
+    const vis = sim.nodes.filter(n => this.inView(n.x, n.y, 0)).sort((a, b) => this.nodeRadius(b, sim) - this.nodeRadius(a, sim)).slice(0, 60); // label the largest visible nodes only
+    for (const n of vis) { const [x, y] = this.w2s(n.x, n.y); ctx.fillText('#' + n.id, x + this.nodeRadius(n, sim) * Math.pow(this.cam.z, 0.7) + 3, y); }
+  }
+  drawHeat(sim) {
+    const mode = this.o.heat, cs = 10, gw = Math.ceil(this.W / cs), gh = Math.ceil(this.H / cs), z = this.cam.z;
+    if (this.heatCv.width !== gw || this.heatCv.height !== gh) { this.heatCv.width = gw; this.heatCv.height = gh; this.hctx = this.heatCv.getContext('2d'); }
+    const val = new Float32Array(gw * gh), wt = new Float32Array(gw * gh), sc = this.scaleFor(mode, sim), rad = clamp(Math.round(34 * z / cs), 1, 7), s2 = 2 * (rad / 1.6) ** 2;
+    for (const n of sim.nodes) {
+      const [sx, sy] = this.w2s(n.x, n.y), gx = Math.floor(sx / cs), gy = Math.floor(sy / cs); if (gx < -rad || gy < -rad || gx >= gw + rad || gy >= gh + rad) continue;
+      const v = clamp((this.nodeValue(n, mode, sim) - sc[0]) / (sc[1] - sc[0]), 0, 1);
+      for (let oy = -rad; oy <= rad; oy++) { const y = gy + oy; if (y < 0 || y >= gh) continue; for (let ox = -rad; ox <= rad; ox++) { const x = gx + ox; if (x < 0 || x >= gw) continue; const k = Math.exp(-(ox * ox + oy * oy) / s2); val[y * gw + x] += v * k; wt[y * gw + x] += k; } }
+    }
+    const img = this.hctx.createImageData(gw, gh), d = img.data, pal = mode === 'pressure' ? DIV_RGB : SEQ_RGB;
+    for (let i = 0; i < gw * gh; i++) {
+      if (wt[i] < 0.02) continue; const v = val[i] / wt[i], c = pal[Math.round(clamp(v, 0, 1) * 8)];
+      d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = Math.round(170 * Math.min(1, wt[i] * 0.7));
+    }
+    this.hctx.putImageData(img, 0, 0); const ctx = this.ctx; ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 0.85; ctx.drawImage(this.heatCv, 0, 0, gw * cs, gh * cs); ctx.globalAlpha = 1;
+  }
+  drawVectors(sim) {
+    const ctx = this.ctx, z = this.cam.z, cs = 44 / z, v = this.view, mode = this.o.vec;
+    const gx0 = Math.floor(v.x0 / cs), gy0 = Math.floor(v.y0 / cs), gw = Math.ceil((v.x1 - v.x0) / cs) + 2, gh = Math.ceil((v.y1 - v.y0) / cs) + 2;
+    if (gw * gh > 20000) return;
+    const ax = new Float32Array(gw * gh), ay = new Float32Array(gw * gh), cn = new Float32Array(gw * gh);
+    const add = (x, y, dx, dy) => { const i = Math.floor(x / cs) - gx0, j = Math.floor(y / cs) - gy0; if (i < 0 || j < 0 || i >= gw || j >= gh) return; const k = j * gw + i; ax[k] += dx; ay[k] += dy; cn[k]++; };
+    if (mode === 'migration') for (const n of sim.nodes) { if (n.bestC === n.c || n.dU <= 0) continue; const cl = sim.clusters[n.bestC], dx = cl.cx - n.x, dy = cl.cy - n.y, L = Math.hypot(dx, dy) || 1; add(n.x, n.y, dx / L * n.dU, dy / L * n.dU); }
+    else for (const e of sim.edges) {
+      const dx = e.t.x - e.s.x, dy = e.t.y - e.s.y, L = Math.hypot(dx, dy) || 1;
+      if (mode === 'flow') { if (e.F > 0) add((e.s.x + e.t.x) / 2, (e.s.y + e.t.y) / 2, dx / L * e.F, dy / L * e.F); }
+      else { const g = e.t.R - e.s.R; add(e.s.x, e.s.y, dx / L * g, dy / L * g); add(e.t.x, e.t.y, dx / L * g, dy / L * g); }
+    }
+    let mx = 0; for (let k = 0; k < ax.length; k++) if (cn[k]) { ax[k] /= cn[k]; ay[k] /= cn[k]; mx = Math.max(mx, Math.hypot(ax[k], ay[k])); }
+    if (mx <= 0) return;
+    ctx.strokeStyle = mode === 'flow' ? '#7dd3fc' : mode === 'migration' ? '#fbbf24' : '#86efac'; ctx.lineWidth = 1.3 / z; ctx.globalAlpha = 0.85; ctx.beginPath();
+    for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+      const k = j * gw + i; if (!cn[k]) continue; const m = Math.hypot(ax[k], ay[k]) / mx; if (m < 0.03) continue;
+      const L = cs * 0.45 * Math.sqrt(m), ux = ax[k] / (m * mx), uy = ay[k] / (m * mx), cx = (gx0 + i + 0.5) * cs, cy = (gy0 + j + 0.5) * cs;
+      const x1 = cx + ux * L, y1 = cy + uy * L, x0 = cx - ux * L, y0 = cy - uy * L, hd = Math.min(L * 0.5, 6 / z);
+      ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.moveTo(x1, y1); ctx.lineTo(x1 - ux * hd - uy * hd * 0.6, y1 - uy * hd + ux * hd * 0.6); ctx.moveTo(x1, y1); ctx.lineTo(x1 - ux * hd + uy * hd * 0.6, y1 - uy * hd - ux * hd * 0.6);
+    }
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  drawSelection(sim) {
+    const ctx = this.ctx, z = this.cam.z, n = this.sel && this.sel.alive ? this.sel : null;
+    const line = (list, color, w) => { ctx.strokeStyle = color; ctx.lineWidth = w / z; ctx.beginPath(); for (const e of list) { if (e.dead) continue; ctx.moveTo(e.s.x, e.s.y); ctx.lineTo(e.t.x, e.t.y); } ctx.stroke(); };
+    if (n) {
+      ctx.globalAlpha = 0.85; line(n.out, '#7dd3fc', 1.6); line(n.in, '#f0abfc', 1.6); ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2 / z; ctx.beginPath(); ctx.arc(n.x, n.y, this.nodeRadius(n, sim) * Math.pow(z, -0.3) + 4 / z, 0, 6.283); ctx.stroke();
+    }
+    const pathLine = (nodes, color) => { if (!nodes || nodes.length < 2) return; ctx.strokeStyle = color; ctx.lineWidth = 3 / z; ctx.globalAlpha = 0.95; ctx.beginPath(); ctx.moveTo(nodes[0].x, nodes[0].y); for (const q of nodes) ctx.lineTo(q.x, q.y); ctx.stroke(); for (const q of nodes) { ctx.beginPath(); ctx.arc(q.x, q.y, 3.5 / z, 0, 6.283); ctx.fillStyle = color; ctx.fill(); } ctx.globalAlpha = 1; };
+    pathLine(this.path, '#e879f9'); pathLine(this.flowPath, '#fab219');
+    const e = this.selEdge && !this.selEdge.dead ? this.selEdge : null;
+    if (e) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3 / z; ctx.beginPath(); ctx.moveTo(e.s.x, e.s.y); ctx.lineTo(e.t.x, e.t.y); ctx.stroke(); }
+    const h = this.hover; if (h && h.alive) { ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.2 / z; ctx.beginPath(); ctx.arc(h.x, h.y, this.nodeRadius(h, sim) * Math.pow(z, -0.3) + 3 / z, 0, 6.283); ctx.stroke(); }
+    if (this.pendingSrc && this.pendingSrc.alive) { const q = this.pendingSrc; ctx.setLineDash([3 / z, 3 / z]); ctx.strokeStyle = '#34d058'; ctx.lineWidth = 1.5 / z; ctx.beginPath(); ctx.arc(q.x, q.y, 10 / z, 0, 6.283); ctx.stroke(); ctx.setLineDash([]); }
+  }
+  drawAnomalies(sim) {
+    const ctx = this.ctx, z = this.cam.z, pr = 6 + 3 * Math.sin(this.time * 5);
+    ctx.strokeStyle = '#e879f9'; ctx.lineWidth = 1.5 / z; ctx.beginPath();
+    for (const n of sim.nodes) if (n.anom && this.inView(n.x, n.y, 10)) { ctx.moveTo(n.x + pr / z, n.y); ctx.arc(n.x, n.y, pr / z, 0, 6.283); }
+    ctx.stroke(); ctx.strokeStyle = '#ff4d4d'; ctx.beginPath();
+    for (const e of sim.edges) if (e.over > 5 && !e.dead) { const x = (e.s.x + e.t.x) / 2, y = (e.s.y + e.t.y) / 2; if (!this.inView(x, y, 5)) continue; ctx.moveTo(x + 4 / z, y); ctx.arc(x, y, 4 / z, 0, 6.283); }
+    ctx.stroke();
+  }
+  pickNode(sim, sx, sy) {
+    const [x, y] = this.s2w(sx, sy), rs = Math.pow(this.cam.z, -0.3); let best = null, bd = Infinity;
+    for (const n of sim.nodes) { const d = Math.hypot(n.x - x, n.y - y), r = Math.max(7 / this.cam.z, this.nodeRadius(n, sim) * rs); if (d < r && d < bd) { bd = d; best = n; } }
+    return best;
+  }
+  pickEdge(sim, sx, sy) {
+    const [x, y] = this.s2w(sx, sy), th = 5 / this.cam.z; let best = null, bd = th;
+    for (const e of sim.edges) {
+      const ax = e.s.x, ay = e.s.y, bx = e.t.x, by = e.t.y; if (Math.min(ax, bx) - th > x || Math.max(ax, bx) + th < x || Math.min(ay, by) - th > y || Math.max(ay, by) + th < y) continue;
+      const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1, t = clamp(((x - ax) * dx + (y - ay) * dy) / L2, 0, 1), d = Math.hypot(ax + t * dx - x, ay + t * dy - y);
+      if (d < bd) { bd = d; best = e; }
+    }
+    return best;
+  }
+}
+/* =====================================================================
+   UI: controls, dashboards, interaction, export, research mode
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = (v, d = 3) => v === undefined || v === null || !Number.isFinite(v) ? '–' : Math.abs(v) >= 1e5 ? v.toExponential(2) : Math.abs(v) >= 100 ? v.toFixed(0) : Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(d);
+const pct = v => Number.isFinite(v) ? (100 * v).toFixed(1) + '%' : '–';
+
+const App = {
+  params: defaultParams(), seed: 1337, sim: null, R: null, playing: false, speed: 1, acc: 0, preset: 'baseline', deterministic: true,
+  mode: 'select', tab: 'metrics', logFilter: 'all', lastUi: 0, fps: 60, tps: 0, tickCount: 0, tpsT: 0, lowT: 0, highT: 0, autoLod: true,
+  logSeen: -1, diagT: -1, sweepBusy: false, cancel: false, sweep: null, sparkHover: {},
+};
+
+const METRIC_LABELS = {
+  N: 'Nodes', E: 'Edges', avgDeg: 'Mean degree ⟨k⟩', kmax: 'Max degree', hubRatio: 'k_max / ⟨k⟩', hill: 'Degree tail exponent (Hill)', clustering: 'Clustering coefficient',
+  pathLen: 'Mean path length (sampled)', modularity: 'Modularity Q (clusters)', modLP: 'Modularity Q (detected)', communities: 'Detected communities', assort: 'Degree assortativity',
+  richClub: 'Rich-club ratio φ/ρ', giniW: 'Gini of weighted degree', giniR: 'Gini of resource', lccFrac: 'Largest component', components: 'Components', totalFlow: 'Total flow',
+  meanFlow: 'Mean flow per edge', maxFlow: 'Max edge flow', congestion: 'Congestion index', overloadFrac: 'Overloaded edges', turbulence: 'Turbulence index', pressVar: 'Pressure variance',
+  entropyR: 'Resource entropy', entropyF: 'Flow entropy', throughput: 'Output (Σ income)', dissipation: 'Energy cost (Σ F·ΔP)', avgR: 'Mean resource', deficit: 'Resource deficit index',
+  stressedFrac: 'Stressed', dormantFrac: 'Dormant', detachedFrac: 'Detached', hubFrac: 'Hubs', births: 'Edge births / tick', deaths: 'Edge deaths / tick', meanTrust: 'Mean trust',
+  crossFlow: 'Cross-cluster flow share', migrations: 'Migrations / tick', failures: 'Failures / tick', cascade: 'Cascade size (10 ticks)', meanU: 'Innovation adoption ū',
+  unemployment: 'Unemployment (1 − ē)', clusterConc: 'Cluster concentration (HHI)', hubShare: 'Top node inflow share', brokerShare: 'Top-5% broker inflow share',
+  edgeLen: 'Edge length / random distance', spFitDeg: 'Spearman(fitness, k_in)', fc: 'Percolation f_c (Molloy–Reed)', resRandom: 'LCC kept, 10% random removal',
+  resTarget: 'LCC kept, 10% targeted removal', resilience: 'Resilience score', fragility: 'Fragility (random − targeted)', ar1: 'Lag-1 autocorrelation of flow',
+  varFlow: 'Flow variance (CV²)', meanA: 'Mean application volume', top1Links: 'Top-1% share of in-links', top1Flow: 'Top-1% share of inflow',
+};
+const PCT_KEYS = new Set(['top1Links', 'top1Flow', 'lccFrac', 'overloadFrac', 'turbulence', 'stressedFrac', 'dormantFrac', 'detachedFrac', 'hubFrac', 'crossFlow', 'unemployment', 'hubShare', 'brokerShare', 'resRandom', 'resTarget']);
+const INT_KEYS = new Set(['N', 'E', 'kmax', 'components', 'communities', 'births', 'deaths', 'migrations', 'failures', 'cascade']);
+const fmtKey = (k, v) => PCT_KEYS.has(k) ? pct(v) : INT_KEYS.has(k) && Number.isFinite(v) && Number.isInteger(v) ? String(v) : fmt(v);
+const SPARKS = ['N', 'E', 'avgR', 'giniR', 'congestion', 'turbulence', 'lccFrac', 'modularity', 'totalFlow', 'stressedFrac', 'meanTrust', 'unemployment'];
+const KIND_COLORS = { anomaly: '#e879f9', pattern: '#22d3ee', regime: '#fab219', shock: '#ff4d4d', recovery: '#34d058', user: '#c3c2b7' };
+
+/* ---------------- lifecycle ---------------- */
+function viewRect() {
+  const W = window.innerWidth, H = window.innerHeight, narrow = W < 900;
+  if (narrow) return { l: 0, r: W, t: 46, b: H };
+  return { l: $('left').classList.contains('hidden') ? 0 : 316, r: W - ($('right').classList.contains('hidden') ? 0 : 356), t: 46, b: H - ($('bottom').classList.contains('hidden') ? 0 : 170) };
+}
+function resetSim(newSeed) {
+  if (newSeed || !App.deterministic) App.seed = (Math.random() * 1e9) >>> 0;
+  App.sim = new Sim(App.params, App.seed);
+  const pr = PRESETS[App.preset]; if (pr && pr.after) pr.after(App.sim);
+  App.R.reset(); App.R.fit(App.sim, viewRect()); App.acc = 0; App.logSeen = -1; App.diagT = -1; App.sparkHover = {};
+  syncControls(); updateUi(true);
+}
+function applyPreset(key) {
+  const keep = {}; for (const k of ['n0', 'maxNodes', 'nClusters', 'zThr', 'zWin']) keep[k] = App.params[k];
+  Object.keys(App.params).forEach(k => delete App.params[k]);
+  Object.assign(App.params, defaultParams(), keep, PRESETS[key].params);
+  App.preset = key; resetSim(false);
+  App.sim.log('user', 'preset', 0, 0, `Preset: ${PRESETS[key].label} — ${PRESETS[key].desc}`);
+  document.querySelectorAll('[data-preset]').forEach(b => b.classList.toggle('on', b.dataset.preset === key));
+  toast(`Preset: ${PRESETS[key].label}`);
+}
+function applyShock(key) { App.sim.applyShock(key); syncControls(); updateUi(true); toast(`Shock: ${SHOCKS[key].label}`); }
+function setPlaying(v) { App.playing = v; $('bPlay').textContent = v ? '❚❚ Pause' : '▶ Play'; $('bPlay').classList.toggle('on', v); }
+function stepOnce() { App.sim.tick(); updateUi(true); }
+
+/* ---------------- left panel ---------------- */
+function sec(title, body, closed, id) { return `<div class="sec${closed ? ' closed' : ''}"${id ? ` id="${id}"` : ''}><h3>${title}</h3><div class="body">${body}</div></div>`; }
+function buildLeft() {
+  const groups = {}; for (const d of PARAM_DEFS) (groups[d.group] = groups[d.group] || []).push(d);
+  let h = sec('Simulation', `
+    <div class="btnrow"><button id="lPlay" class="primary">▶ Play</button><button id="lStep">Step</button><button id="lReset">Reset</button><button id="lFit" title="Fit camera (F)">Fit view</button></div>
+    <div class="row"><label title="Ticks per animation frame (log scale). Heavy runs cap at ~28 ms of simulation per frame.">Speed</label><input type="range" id="speed" min="-2" max="1.4" step="0.05" value="0"><span class="mono" id="speedV">1</span></div>
+    <div class="row"><label title="Seed of the model RNG. Same seed + parameters + interventions ⇒ same run.">Seed</label><input type="text" id="seedIn" class="mono"><button id="seedRnd" title="New random seed and reset">🎲</button></div>
+    <div class="checks"><label title="Unchecked: every Reset draws a new seed"><input type="checkbox" id="detChk" checked>Deterministic</label><label title="Reduce detail automatically when FPS drops"><input type="checkbox" id="lodChk" checked>Auto LOD</label></div>
+    <div class="hint" id="presetNote"></div>`);
+  const open = { 'Network formation': 1, 'Flow & physics': 0 };
+  for (const g in groups) {
+    let rows = '';
+    for (const d of groups[g]) rows += `<div class="row" data-k="${d.k}"><label class="${d.init ? 'init' : ''}" title="${esc(d.label + (d.tip ? ' — ' + d.tip : '') + (d.init ? ' (applies on Reset)' : ''))}">${esc(d.label)}</label><input type="range" min="${d.min}" max="${d.max}" step="${d.step}"><input type="number" min="${d.min}" max="${d.max}" step="${d.step}"></div>`;
+    h += sec(g, rows + (g === 'Network formation' ? '<div class="hint">⟲ = applies on Reset. Everything else applies live.</div>' : ''), !open[g]);
+  }
+  h += sec('View', `
+    <div class="opt"><label>Node colour</label><select id="vColor"><option value="cluster">Cluster</option><option value="state">State</option><option value="community">Detected community</option><option value="fitness">Fitness η_eff</option><option value="resource">Resource R</option><option value="pressure">Pressure P</option><option value="innovation">Innovation u</option><option value="congestion">Congestion</option><option value="turbulence">Re / Re_c</option></select></div>
+    <div class="opt"><label>Node size</label><select id="vSize"><option value="wdeg">Weighted degree</option><option value="resource">Resource</option><option value="centrality">Eigenvector centrality</option><option value="betweenness">Betweenness</option><option value="broker">Structural-hole value</option></select></div>
+    <div class="opt"><label>Heatmap</label><select id="vHeat"><option value="none">None</option><option value="pressure">Pressure</option><option value="deficit">Resource deficit</option><option value="congestion">Congestion</option><option value="fitness">Fitness</option><option value="innovation">Innovation adoption</option><option value="turbulence">Turbulence (Re/Re_c)</option></select></div>
+    <div class="opt"><label>Vector field</label><select id="vVec"><option value="none">None</option><option value="flow">Flow velocity</option><option value="gradient">Resource gradient</option><option value="migration">Migration pressure</option></select></div>
+    <div class="checks">
+      <label><input type="checkbox" data-o="edges" checked>Edges</label><label><input type="checkbox" data-o="particles" checked>Flow particles</label>
+      <label><input type="checkbox" data-o="curved">Curved edges</label><label><input type="checkbox" data-o="arrows" checked>Direction marks</label>
+      <label><input type="checkbox" data-o="halos" checked>Pressure halos</label><label><input type="checkbox" data-o="hulls" checked>Cluster hulls</label>
+      <label><input type="checkbox" data-o="labels" checked>Labels (zoomed)</label><label><input type="checkbox" data-o="anom">Anomaly overlay</label>
+    </div>
+    <div class="legend" id="legNodes"></div>
+    <div class="legend" id="legEdges"></div>
+    <div class="hint">Particles move along edges at speed ∝ F/C; jitter marks turbulent endpoints (Re &gt; Re_c). Halos: hubs and nodes with pressure &gt; μ+1.5σ.</div>`);
+  $('left').innerHTML = h;
+  $('left').querySelectorAll('.sec>h3').forEach(el => el.onclick = () => el.parentElement.classList.toggle('closed'));
+  $('left').querySelectorAll('.row[data-k]').forEach(row => {
+    const k = row.dataset.k, [rg, num] = row.querySelectorAll('input');
+    rg.oninput = () => setParam(k, +rg.value); num.onchange = () => setParam(k, +num.value);
+  });
+  $('lPlay').onclick = () => setPlaying(!App.playing); $('lStep').onclick = stepOnce; $('lReset').onclick = () => resetSim(false); $('lFit').onclick = () => App.R.fit(App.sim, viewRect());
+  $('speed').oninput = () => { App.speed = Math.pow(10, +$('speed').value); $('speedV').textContent = App.speed < 1 ? App.speed.toFixed(2) : App.speed.toFixed(1); };
+  $('seedIn').onchange = () => { const v = $('seedIn').value.trim(); App.seed = /^\d+$/.test(v) ? (+v >>> 0) : hashStr(v); resetSim(false); };
+  $('seedRnd').onclick = () => resetSim(true);
+  $('detChk').onchange = () => App.deterministic = $('detChk').checked;
+  $('lodChk').onchange = () => { App.autoLod = $('lodChk').checked; if (!App.autoLod) App.R.lod = 0; };
+  const R = App.R;
+  $('vColor').onchange = () => { R.o.colorBy = $('vColor').value; updateLegend(); };
+  $('vSize').onchange = () => R.o.sizeBy = $('vSize').value;
+  $('vHeat').onchange = () => R.o.heat = $('vHeat').value;
+  $('vVec').onchange = () => R.o.vec = $('vVec').value;
+  $('left').querySelectorAll('[data-o]').forEach(cb => cb.onchange = () => R.o[cb.dataset.o] = cb.checked);
+  $('legEdges').innerHTML = EDGE_CLASSES.map(c => `<span><span class="sw" style="background:${c.color}"></span>${c.name}</span>`).join('');
+  updateLegend();
+}
+function updateLegend() {
+  const m = App.R.o.colorBy, el = $('legNodes'); if (!el) return;
+  if (m === 'cluster' && App.sim) el.innerHTML = App.sim.clusters.map((c, i) => `<span><span class="dot" style="background:${CL_COLORS[i]}"></span>${c.name}</span>`).join('');
+  else if (m === 'state') el.innerHTML = Object.entries(STATE_COLORS).map(([k, c]) => `<span><span class="dot" style="background:${c}"></span>${k}</span>`).join('');
+  else if (m === 'community') el.innerHTML = '<span style="grid-column:1/-1">Label-propagation communities (colours reused mod 8)</span>';
+  else { const pal = m === 'pressure' ? DIV : SEQ; el.innerHTML = `<span style="grid-column:1/-1">${m === 'pressure' ? 'low pressure (sink)' : 'low'} <span style="display:inline-block;width:110px;height:8px;vertical-align:middle;border-radius:2px;background:linear-gradient(90deg,${pal.join(',')})"></span> ${m === 'pressure' ? 'high (source)' : 'high'} · 5th–95th pct</span>`; }
+}
+function setParam(k, v) {
+  const d = PDEF[k]; if (!Number.isFinite(v)) return; v = clamp(v, d.min, d.max);
+  if (d.step >= 1) v = Math.round(v);
+  App.params[k] = v; syncRow(k);
+  if (d.init) toast(`${d.label} applies on Reset`);
+}
+function syncRow(k) {
+  const row = document.querySelector(`.row[data-k="${k}"]`); if (!row) return; const [rg, num] = row.querySelectorAll('input'), v = App.params[k];
+  rg.value = v; if (document.activeElement !== num) num.value = +(+v).toPrecision(4); row.classList.toggle('changed', v !== PDEF[k].def);
+}
+function syncControls() {
+  for (const d of PARAM_DEFS) syncRow(d.k);
+  $('seedIn').value = App.seed; $('sSeed').textContent = App.seed;
+  $('presetNote').textContent = `Preset: ${PRESETS[App.preset].label}`; updateLegend();
+}
+
+/* ---------------- bottom panel ---------------- */
+function buildBottom() {
+  $('sparks').innerHTML = SPARKS.map(k => `<div class="spark"><div class="lbl"><span>${METRIC_LABELS[k]}</span><b id="sv-${k}"></b></div><canvas data-k="${k}"></canvas></div>`).join('');
+  $('sparks').querySelectorAll('canvas').forEach(cv => {
+    cv.onmousemove = ev => { const r = cv.getBoundingClientRect(); App.sparkHover[cv.dataset.k] = (ev.clientX - r.left) / r.width; drawSpark(cv); sparkTip(cv, ev); };
+    cv.onmouseleave = () => { delete App.sparkHover[cv.dataset.k]; drawSpark(cv); hideTip(); };
+  });
+  $('scen').innerHTML = `<div class="scen-h"><span>Presets — rebuild network</span><span class="muted">hover for details</span></div><div class="scen-row">${Object.entries(PRESETS).map(([k, p]) => `<button data-preset="${k}" title="${esc(p.desc)}">${p.label}</button>`).join('')}</div>
+    <div class="scen-h"><span>Shocks — apply to running system</span></div><div class="scen-row">${Object.entries(SHOCKS).map(([k, s]) => `<button data-shock="${k}" class="${['randomFail', 'targeted', 'topHub', 'collapse', 'contraction'].includes(k) ? 'warn' : ''}" title="${esc(s.desc)}">${s.label}</button>`).join('')}</div>`;
+  $('scen').querySelectorAll('[data-preset]').forEach(b => b.onclick = () => applyPreset(b.dataset.preset));
+  $('scen').querySelectorAll('[data-shock]').forEach(b => b.onclick = () => applyShock(b.dataset.shock));
+  document.querySelector('[data-preset="baseline"]').classList.add('on');
+}
+function sparkRange(h) { const n = h.t.length, start = Math.max(0, n - 1500); return [start, n]; }
+function drawSpark(cv) {
+  const k = cv.dataset.k, sim = App.sim, h = sim.hist, dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = cv.clientWidth, H = cv.clientHeight; if (!W) return;
+  if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const [a, b] = sparkRange(h), data = h[k]; if (b - a < 2) return;
+  let lo = Infinity, hi = -Infinity; for (let i = a; i < b; i++) { lo = Math.min(lo, data[i]); hi = Math.max(hi, data[i]); }
+  if (hi - lo < 1e-9) { hi += 0.5; lo -= 0.5; }
+  const X = i => (i - a) / (b - a - 1) * (W - 2) + 1, Y = v => H - 4 - (v - lo) / (hi - lo) * (H - 8);
+  const t0 = h.t[a], t1 = h.t[b - 1]; // event markers
+  for (const e of sim.events) { if (e.t < t0 || e.kind === 'user') continue; const x = (e.t - t0) / Math.max(1, t1 - t0) * (W - 2) + 1; ctx.fillStyle = KIND_COLORS[e.kind]; ctx.globalAlpha = 0.7; ctx.fillRect(x, H - 3, 1.5, 3); }
+  ctx.globalAlpha = 1; ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.beginPath();
+  const step = Math.max(1, Math.floor((b - a) / W));
+  for (let i = a; i < b; i += step) { const x = X(i), y = Y(data[i]); i === a ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.lineTo(X(b - 1), Y(data[b - 1])); ctx.stroke();
+  const hv = App.sparkHover[k]; if (hv !== undefined) { const i = a + Math.round(hv * (b - a - 1)); ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(i), 0); ctx.lineTo(X(i), H); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(X(i), Y(data[i]), 2.5, 0, 6.283); ctx.fill(); }
+}
+function sparkTip(cv, ev) {
+  const k = cv.dataset.k, h = App.sim.hist, [a, b] = sparkRange(h); if (b - a < 2) return;
+  const i = a + Math.round(App.sparkHover[k] * (b - a - 1)), evs = App.sim.events.filter(e => Math.abs(e.t - h.t[i]) <= Math.max(2, (h.t[b - 1] - h.t[a]) / 150) && e.kind !== 'user');
+  showTip(ev.clientX, ev.clientY - 10, `${METRIC_LABELS[k]}\nt = ${h.t[i]}   ${fmtKey(k, h[k][i])}` + (evs.length ? '\n' + evs.slice(0, 3).map(e => `▸ ${e.kind}: ${e.note}`).join('\n') : ''));
+}
+
+/* ---------------- right panel ---------------- */
+function showTab(t) {
+  App.tab = t; document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  for (const p of ['metrics', 'log', 'diag', 'insp']) $('pane-' + p).classList.toggle('hidden', p !== t);
+  if ($('right').classList.contains('hidden')) { $('right').classList.remove('hidden'); $('tR').classList.add('on'); }
+  updateUi(true);
+}
+function kvRows(rows) {
+  return rows.map(r => typeof r === 'string' ? `<tr class="grp"><td colspan="2">${r}</td></tr>` : `<tr><td title="${esc(r[2] || '')}">${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+}
+function renderMetrics() {
+  const s = App.sim, m = s.m, M = k => fmtKey(k, m[k]), L = k => METRIC_LABELS[k];
+  const topList = (arr, f) => arr.map(n => `<span class="linkish" data-node="${n.id}">#${n.id}</span> ${f(n)}`).join('<br>');
+  const rows = [
+    'Regime', ['Phase estimate', `<span class="badge ph-${m.phaseNow}">${m.phaseNow}</span>`, PHASE_INFO[m.phaseNow]],
+    ['Early warning (τ AR1 / τ var)', `${fmt(m.tauAR1, 2)} / ${fmt(m.tauVar, 2)}`, 'Kendall trend over last 200 ticks; both rising ⇒ critical slowing down'],
+    'Network', ...['N', 'E', 'avgDeg', 'kmax', 'hubRatio', 'hill', 'clustering', 'pathLen', 'modularity', 'modLP', 'communities', 'assort', 'richClub', 'giniW', 'lccFrac', 'components', 'edgeLen', 'spFitDeg'].map(k => [L(k), M(k)]),
+    ['Detached / stressed / dormant', `${pct(m.detachedFrac)} / ${pct(m.stressedFrac)} / ${pct(m.dormantFrac)}`], ['Edge births / deaths per tick', `${m.births} / ${m.deaths}`],
+    'Flow', ...['totalFlow', 'meanFlow', 'maxFlow', 'congestion', 'overloadFrac', 'turbulence', 'pressVar', 'entropyR', 'entropyF', 'throughput', 'dissipation', 'avgR', 'deficit', 'giniR', 'meanTrust', 'crossFlow', 'meanU'].map(k => [L(k), M(k)]),
+    'Dynamics & resilience', ...['ar1', 'varFlow', 'cascade', 'migrations', 'unemployment', 'meanA', 'fc', 'resRandom', 'resTarget', 'resilience', 'fragility', 'hubShare', 'top1Links', 'top1Flow', 'brokerShare'].map(k => [L(k), M(k)]),
+  ];
+  const tipFor = { congestion: 'Flow-weighted mean of F/C', turbulence: 'Share of node throughput at nodes with Re > Re_c', hill: `MLE over k ≥ ${m.hillKmin}; 2–3 is typical of scale-free networks`, richClub: 'Density among top-10% degree nodes ÷ overall density', fc: 'Fraction of random removals before the giant component dissolves: 1 − 1/(⟨k²⟩/⟨k⟩ − 1)', dissipation: 'Σ F_ij·(P_i − P_j): energy lost to friction', clusterConc: 'Herfindahl index of cluster populations' };
+  for (const r of rows) if (Array.isArray(r) && !r[2]) { const k = Object.keys(METRIC_LABELS).find(q => METRIC_LABELS[q] === r[0]); if (k && tipFor[k]) r[2] = tipFor[k]; }
+  const cl = s.clusters.map((c, i) => `<tr><td><span class="dot" style="background:${CL_COLORS[i]}"></span>${c.name}</td><td>${c.members}</td><td>${c.wage.toFixed(2)}</td><td>${c.cost.toFixed(2)}</td><td>${c.meanR.toFixed(1)}</td><td>${(100 * c.meanEmp).toFixed(0)}%</td><td>${pct(c.flowShare)}</td><td>${c.inMig}/${c.outMig}</td></tr>`).join('');
+  $('pane-metrics').innerHTML = `<table class="kv">${kvRows(rows)}</table>
+    <table class="kv"><tr class="grp"><td colspan="2">Degree distribution (log–log CCDF)</td></tr></table><canvas id="ddeg"></canvas>
+    <table class="kv"><tr class="grp"><td colspan="2">Clusters</td></tr></table>
+    <div style="overflow-x:auto"><table class="grid"><tr><th>cluster</th><th>N</th><th>wage</th><th>cost</th><th>R̄</th><th>emp</th><th>flow</th><th>in/out</th></tr>${cl}</table></div>
+    <table class="kv"><tr class="grp"><td colspan="2">Top nodes (click to select)</td></tr>
+    <tr><td>Eigenvector</td><td>${topList(s.top.eig, n => n.eig.toFixed(2))}</td></tr>
+    <tr><td>Betweenness (sampled)</td><td>${topList(s.top.betw, n => n.betw.toFixed(2))}</td></tr>
+    <tr><td>Brokerage (open pairs)</td><td>${topList(s.top.broker, n => fmt(n.broker, 0))}</td></tr></table><div style="height:10px"></div>`;
+  drawDegree();
+}
+function drawDegree() {
+  const cv = $('ddeg'); if (!cv) return; const dh = App.sim.degHist, dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr; const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const pts = []; let tot = dh.reduce((a, b) => a + b[1], 0), cum = tot;
+  for (const [k, c] of dh) { if (k > 0) pts.push([Math.log10(k), Math.log10(cum / tot)]); cum -= c; }
+  if (pts.length < 2) return;
+  const x0 = 0, x1 = Math.max(1, pts[pts.length - 1][0]), y0 = Math.min(-2, pts[pts.length - 1][1]), L = 34, B = 18, T = 6, Rr = 10;
+  const X = v => L + (v - x0) / (x1 - x0) * (W - L - Rr), Y = v => T + (0 - v) / (0 - y0) * (H - T - B);
+  ctx.strokeStyle = '#2c2c2a'; ctx.fillStyle = '#898781'; ctx.font = '9.5px ui-monospace, monospace'; ctx.lineWidth = 1;
+  for (let d = 0; d <= Math.ceil(x1); d++) { ctx.beginPath(); ctx.moveTo(X(d), T); ctx.lineTo(X(d), H - B); ctx.stroke(); ctx.fillText('10' + (d ? '^' + d : '⁰'), X(d) - 8, H - 5); }
+  for (let d = 0; d >= Math.floor(y0); d--) { ctx.beginPath(); ctx.moveTo(L, Y(d)); ctx.lineTo(W - Rr, Y(d)); ctx.stroke(); ctx.fillText(d === 0 ? '1' : '1e' + d, 2, Y(d) + 3); }
+  ctx.fillStyle = '#22d3ee'; for (const [x, y] of pts) { ctx.beginPath(); ctx.arc(X(x), Y(y), 2.2, 0, 6.283); ctx.fill(); }
+  const m = App.sim.m; if (m.hill > 1) { // Hill fit: CCDF slope = −(α−1)
+    const kx = Math.log10(m.hillKmin), p0 = pts.find(p => p[0] >= kx) || pts[0];
+    ctx.strokeStyle = '#fab219'; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(X(p0[0]), Y(p0[1])); const xe = x1; ctx.lineTo(X(xe), Y(p0[1] - (m.hill - 1) * (xe - p0[0]))); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#c3c2b7'; ctx.fillText(`P(K≥k) · Hill fit α = ${m.hill.toFixed(2)}`, L + 6, T + 10);
+  }
+}
+function renderLog() {
+  const evs = App.sim.events, f = App.logFilter, list = evs.filter(e => f === 'all' || e.kind === f).slice(-400).reverse();
+  const kinds = ['all', 'anomaly', 'pattern', 'regime', 'shock', 'recovery', 'user'];
+  $('pane-log').innerHTML = `<div class="log-tools">${kinds.map(k => `<button data-f="${k}" class="${k === f ? 'on' : ''}" style="padding:2px 6px;font-size:10.5px">${k}</button>`).join('')}</div>` +
+    (list.length ? list.map(e => `<div class="log-item"><div class="hd"><span>t=${e.t}</span><span class="k k-${e.kind}">${e.kind}</span>${e.kind === 'anomaly' ? `<span>${esc(METRIC_LABELS[e.metric] || e.metric)} = ${fmtKey(e.metric, e.value)} (z ${e.z > 0 ? '+' : ''}${e.z.toFixed(1)})</span>` : ''}<span class="grow"></span><span title="state hash">${e.hash}</span></div><div class="note">${esc(e.note)}</div></div>`).join('')
+      : '<div class="hint" style="padding:12px 10px">No events yet. Anomaly detection starts at t = 80; structural pattern detectors at t = 150. Try a shock.</div>');
+  $('pane-log').querySelectorAll('[data-f]').forEach(b => b.onclick = () => { App.logFilter = b.dataset.f; renderLog(); });
+}
+function renderDiag() {
+  const d = App.sim.diag || [];
+  $('pane-diag').innerHTML = `<div class="hint" style="padding:8px 10px">Live checks of theoretical expectations on the current run (✓ present, ~ weak, ✗ absent). Controlled tests below run paired headless simulations that differ in one parameter.</div>` +
+    d.map(x => `<div class="diag"><div class="t"><span class="st st-${x.s}">${x.s === 'pass' ? '✓' : x.s === 'weak' ? '~' : '✗'}</span><span>${esc(x.name)}</span></div><div class="v">${esc(x.val)}</div><div class="w">${esc(x.why)}</div></div>`).join('') +
+    `<div style="padding:10px"><button id="dRun" class="primary">Run controlled tests</button> <span class="muted" id="dStat"></span></div><div id="dRes">${App.testHtml || ''}</div>`;
+  $('dRun').onclick = runControlledTests; if (App.sweepBusy) $('dRun').disabled = true;
+}
+function nodeTrend(n) { const a = []; for (let i = 0; i < 32; i++) a.push(n.mem[(n.memI + i) & 31]); return a; }
+function trendArrow(a) { const d = a[a.length - 1] - a[0], s = Math.max(1e-6, Math.abs(a[0]) * 0.05); return d > s ? '↑' : d < -s ? '↓' : '→'; }
+function inspNodeDyn(n) {
+  const s = App.sim, tr = nodeTrend(n), nbrs = [...n.out.map(x => [x.t, x.w, '→']), ...n.in.map(x => [x.s, x.w, '←'])].filter(x => x[0].alive).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  return `<h4><span class="dot" style="background:${CL_COLORS[n.c]}"></span>Node #${n.id} <span class="badge" style="color:${STATE_COLORS[n.state]};border-color:${STATE_COLORS[n.state]}66">${n.state}</span>${n.frozen ? ' <span class="badge" style="color:#fff;border-color:#fff6">frozen</span>' : ''}</h4>
+    <canvas id="iTrend" style="width:100%;height:40px;display:block"></canvas>
+    <table class="kv">${kvRows([
+        ['Cluster', s.clusters[n.c].name + (n.moves ? ` (moved ${n.moves}×)` : '')], ['Fitness η / η_eff', `${n.fit.toFixed(2)} / ${n.fe.toFixed(2)}`],
+        ['Resource R (32-tick trend)', `${n.R.toFixed(2)} ${trendArrow(tr)}`], ['Income / cost', `${n.inc.toFixed(3)} / ${n.exp.toFixed(3)}`],
+        ['Pressure P', n.P.toFixed(3)], ['Inflow / outflow', `${n.fin.toFixed(3)} / ${n.fout.toFixed(3)}`],
+        ['Degree (in / out)', `${n.deg} (${n.in.length} / ${n.out.length})`], ['Weighted degree (in / out)', `${n.win.toFixed(2)} / ${n.wout.toFixed(2)}`],
+        ['Eigenvector / betweenness', `${n.eig.toFixed(3)} / ${n.betw.toFixed(3)}`], ['Brokerage / hole value', `${fmt(n.broker, 0)} / ${n.hole.toFixed(2)}`, 'Open neighbour pairs; (1−C)·neighbour-cluster diversity'],
+        ['Local clustering', n.clust.toFixed(3)], ['Skill match M / employment e', `${n.match.toFixed(3)} / ${n.emp.toFixed(3)}`],
+        ['Applications A / signal S', `${n.A.toFixed(1)} / ${n.S.toFixed(3)}`], ['Re (Re_c)', `${n.Re.toFixed(2)} (${s.p.reCrit})`], ['Innovation u', n.u.toFixed(3)],
+        ['Best cluster (ΔU)', n.bestC === n.c ? 'current' : `${s.clusters[n.bestC].name} (+${n.dU.toFixed(3)})`],
+    ])}</table>
+    <div class="muted" style="margin:6px 0 2px">Strongest ties</div>
+    <div class="mono" style="font-size:10.5px">${nbrs.map(([m, w, d]) => `${d} <span class="linkish" data-node="${m.id}">#${m.id}</span> <span class="muted">${s.clusters[m.c].name}</span> w=${w.toFixed(2)}`).join('<br>') || '<span class="muted">none</span>'}</div>`;
+}
+function inspKey() { const R = App.R; return (R.sel && R.sel.alive ? 'n' + R.sel.id + (R.sel.frozen ? 'f' : '') + (R.sel.levU < 0 ? 'l' : '') + R.sel.c : R.selEdge && !R.selEdge.dead ? 'e' + R.selEdge.key : '-') + App.mode + (R.path ? 'p' + R.path.length : '') + (R.flowPath ? 'q' + R.flowPath.length : ''); }
+function refreshInspector() { // live values only; buttons stay attached
+  const R = App.R, n = R.sel && R.sel.alive ? R.sel : null;
+  if (App.inspKey !== inspKey() || (!n && !(R.selEdge && !R.selEdge.dead))) { if (App.inspKey !== inspKey()) renderInspector(); return; }
+  if (n && $('iDyn')) { $('iDyn').innerHTML = inspNodeDyn(n); drawTrend($('iTrend'), nodeTrend(n)); }
+  else if (!n && $('eDyn')) $('eDyn').innerHTML = inspEdgeDyn(R.selEdge);
+}
+function inspEdgeDyn(e) {
+  const s = App.sim;
+  return `<h4>Edge <span class="linkish" data-node="${e.s.id}">#${e.s.id}</span> → <span class="linkish" data-node="${e.t.id}">#${e.t.id}</span></h4><table class="kv">${kvRows([
+      ['Type', e.type], ['State', EDGE_CLASSES[edgeClass(e)].name], ['Clusters', `${s.clusters[e.s.c].name} → ${s.clusters[e.t.c].name}`], ['Weight w', e.w.toFixed(3)], ['Flow F', e.F.toFixed(4)],
+      ['Capacity C', e.C.toFixed(4)], ['Congestion F/C', e.cong.toFixed(3)], ['Pressure drop ΔP', e.dP.toFixed(3)], ['Trust', e.trust.toFixed(3)], ['Age', e.age], ['Weak ticks (→ prune at 20)', e.low], ['Overload ticks', e.over],
+    ])}</table>`;
+}
+function renderInspector() {
+  const R = App.R, s = App.sim, n = R.sel && R.sel.alive ? R.sel : null, e = R.selEdge && !R.selEdge.dead ? R.selEdge : null;
+  const modes = [['select', 'Select'], ['addEdge', 'Add edge'], ['cutEdge', 'Cut edge'], ['path', 'Shortest path']];
+  let h = `<div class="modes">${modes.map(([k, l]) => `<button data-mode="${k}" class="${App.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  if (n) {
+    h += `<div class="insp"><div id="iDyn">${inspNodeDyn(n)}</div>
+      <div class="actions">
+        <button data-act="inject">Inject +20 R</button><button data-act="fit">Boost fitness ×1.5</button><button data-act="freeze">${n.frozen ? 'Unfreeze' : 'Freeze (clamp)'}</button>
+        <button data-act="lev">${n.levU < 0 ? 'Remove leverage' : 'Give app leverage'}</button><button data-act="innov">Seed innovation</button>
+        <button data-act="flow">Trace flow path</button><button data-act="edge">Add edge from here</button><button data-act="remove" class="warn">Remove node</button>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center"><span class="muted">Force migration to</span><select id="iMig" style="width:auto">${s.clusters.map((c, i) => `<option value="${i}" ${i === n.c ? 'disabled' : ''}>${c.name}</option>`).join('')}</select><button data-act="mig">Move</button></div>
+      ${R.path ? `<div class="hint" style="padding:6px 0">Shortest path (undirected): ${R.path.length - 1} hops · ${R.path.map(q => '#' + q.id).join(' → ')}</div>` : ''}
+      ${R.flowPath ? `<div class="hint" style="padding:6px 0">Max-flow trace: ${R.flowPath.map(q => '#' + q.id).join(' → ')}</div>` : ''}
+      <div class="hint" style="padding:6px 0 0">Shift+click another node for the shortest path. Blue = out-edges, pink = in-edges.</div></div>`;
+  } else if (e) {
+    h += `<div class="insp"><div id="eDyn">${inspEdgeDyn(e)}</div><div class="actions"><button data-act="ecut" class="warn">Cut edge</button><button data-act="eboost">Weight +1</button><button data-act="etrust">Trust → 1</button></div></div>`;
+  } else h += `<div class="hint" style="padding:12px 10px">Click a node or edge on the canvas to inspect it, or pick a top node in the Metrics tab.<br><br>Modes: <b>Add edge</b> — click source then target. <b>Cut edge</b> — click an edge. <b>Shortest path</b> — select a node, then click another.</div>`;
+  $('pane-insp').innerHTML = h; App.inspKey = inspKey();
+  $('pane-insp').querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  $('pane-insp').querySelectorAll('[data-act]').forEach(b => b.onclick = () => nodeAction(b.dataset.act));
+  if (n) drawTrend($('iTrend'), nodeTrend(n));
+}
+function drawTrend(cv, a) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); let lo = Math.min(...a), hi = Math.max(...a); if (hi - lo < 1e-6) { hi += 1; lo -= 1; }
+  ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 1.5; ctx.beginPath(); a.forEach((v, i) => { const x = i / (a.length - 1) * (W - 4) + 2, y = H - 4 - (v - lo) / (hi - lo) * (H - 12); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+  ctx.fillStyle = '#898781'; ctx.font = '9.5px ui-monospace, monospace'; ctx.fillText(`R over last 32 ticks  [${lo.toFixed(1)} … ${hi.toFixed(1)}]`, 2, 9);
+}
+function setMode(m) { App.mode = m; App.R.pendingSrc = null; if (App.tab === 'insp') renderInspector(); $('view').style.cursor = m === 'select' ? 'crosshair' : 'cell'; if (m !== 'select') toast({ addEdge: 'Add edge: click source node, then target', cutEdge: 'Cut edge: click an edge', path: 'Path: select a node, then click another' }[m]); }
+function selectNodeById(id) { const n = App.sim.nodes.find(q => q.id === id); if (!n) return; App.R.sel = n; App.R.selEdge = null; App.R.path = null; App.R.flowPath = null; showTab('insp'); }
+function nodeAction(act) {
+  const s = App.sim, R = App.R, n = R.sel && R.sel.alive ? R.sel : null, e = R.selEdge && !R.selEdge.dead ? R.selEdge : null, lg = note => s.log('user', 'intervention', 0, 0, note);
+  if (n) switch (act) {
+    case 'inject': n.R += 20; lg(`+20 R to #${n.id}`); break;
+    case 'fit': n.fit = Math.min(4, n.fit * 1.5); lg(`fitness ×1.5 at #${n.id}`); break;
+    case 'freeze': n.frozen = !n.frozen; lg(`${n.frozen ? 'froze' : 'unfroze'} #${n.id}`); break;
+    case 'lev': n.levU = n.levU < 0 ? 1 : -1; if (n.levU < 0 && s.p.leverageMult < 2) { s.p.leverageMult = 10; syncRow('leverageMult'); } lg(`${n.levU < 0 ? 'gave' : 'removed'} application leverage at #${n.id}`); break;
+    case 'innov': s.injectInnovation(n, true); lg(`innovation seeded at #${n.id}`); break;
+    case 'flow': R.flowPath = flowPath(n); break;
+    case 'edge': setMode('addEdge'); R.pendingSrc = n; toast(`Add edge from #${n.id}: click target`); break;
+    case 'remove': s.removeNode(n); s.rebuild(); lg(`removed #${n.id}`); R.sel = null; R.path = null; break;
+    case 'mig': { const c = +$('iMig').value; if (c !== n.c) { s.moveNode(n, c, 0); lg(`forced #${n.id} to ${s.clusters[c].name}`); } break; }
+  }
+  if (e) switch (act) {
+    case 'ecut': s.removeEdge(e); s.rebuild(); lg(`cut edge #${e.s.id}→#${e.t.id}`); R.selEdge = null; break;
+    case 'eboost': e.w = Math.min(5, e.w + 1); s.rebuild(); lg(`weight +1 on #${e.s.id}→#${e.t.id}`); break;
+    case 'etrust': e.trust = 1; lg(`trust → 1 on #${e.s.id}→#${e.t.id}`); break;
+  }
+  renderInspector();
+}
+function shortestPath(s, a, b) {
+  const prev = new Map([[a, null]]), q = [a];
+  for (let i = 0; i < q.length; i++) { const v = q[i]; if (v === b) break; for (const w of v.nb) if (w.alive && !prev.has(w)) { prev.set(w, v); q.push(w); } }
+  if (!prev.has(b)) return null; const path = []; for (let v = b; v; v = prev.get(v)) path.unshift(v); return path;
+}
+function flowPath(n) {
+  const path = [n], seen = new Set([n]); let cur = n;
+  for (let i = 0; i < 40; i++) { let best = null; for (const e of cur.out) if (!e.dead && e.F > 1e-9 && !seen.has(e.t) && (!best || e.F > best.F)) best = e; if (!best) break; cur = best.t; seen.add(cur); path.push(cur); }
+  return path;
+}
+
+/* ---------------- periodic UI refresh ---------------- */
+function updateUi(force) {
+  const s = App.sim, m = s.m;
+  $('sT').textContent = s.t; $('sN').textContent = m.N; $('sE').textContent = m.E; $('sFps').textContent = App.fps.toFixed(0); $('sTps').textContent = App.tps.toFixed(0); $('sLod').textContent = App.R.lod; $('sSeed').textContent = App.seed;
+  const ph = $('phase'); ph.textContent = s.phase; ph.className = 'badge ph-' + s.phase; ph.title = PHASE_INFO[s.phase] + ' (confirmed over 2 samples; current estimate: ' + m.phaseNow + ')';
+  if (!$('bottom').classList.contains('hidden')) { for (const k of SPARKS) { const el = $('sv-' + k); if (el) el.textContent = fmtKey(k, m[k]); } $('sparks').querySelectorAll('canvas').forEach(drawSpark); }
+  const nEv = s.events.length; $('logCnt').textContent = nEv ? nEv : '';
+  if ($('right').classList.contains('hidden')) return;
+  const slow = !force && App.hoverRight && performance.now() - (App.paneT || 0) < 1500; // keep panel steady under the pointer
+  if (!slow) App.paneT = performance.now();
+  if (App.tab === 'metrics') { if (!slow) renderMetrics(); }
+  else if (App.tab === 'log' && (force || nEv !== App.logSeen)) { App.logSeen = nEv; renderLog(); }
+  else if (App.tab === 'diag' && (force || s.t - App.diagT >= 10)) { App.diagT = s.t; renderDiag(); }
+  else if (App.tab === 'insp') { if (force) renderInspector(); else if (App.playing && !slow) refreshInspector(); }
+}
+
+/* ---------------- tooltips, toasts ---------------- */
+function showTip(x, y, text) { const t = $('tip'); t.textContent = text; t.style.display = 'block'; const r = t.getBoundingClientRect(); t.style.left = Math.min(window.innerWidth - r.width - 8, x + 14) + 'px'; t.style.top = Math.min(window.innerHeight - r.height - 8, Math.max(46, y + 14)) + 'px'; }
+function hideTip() { $('tip').style.display = 'none'; }
+let toastT = 0; function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => t.style.display = 'none', 2200); }
+function nodeTip(n) {
+  const s = App.sim;
+  return `#${n.id}  ${s.clusters[n.c].name} · ${n.state}${n.frozen ? ' · frozen' : ''}
+fitness ${n.fit.toFixed(2)} (eff ${n.fe.toFixed(2)})   R ${n.R.toFixed(2)} ${trendArrow(nodeTrend(n))}
+income ${n.inc.toFixed(3)}  cost ${n.exp.toFixed(3)}  P ${n.P.toFixed(3)}
+degree ${n.deg} (in ${n.in.length}/out ${n.out.length})  w ${(n.win + n.wout).toFixed(2)}
+eigen ${n.eig.toFixed(3)}  betw ${n.betw.toFixed(3)}  broker ${fmt(n.broker, 0)}
+match ${n.match.toFixed(2)}  employ ${n.emp.toFixed(2)}  A ${n.A.toFixed(1)}  S ${n.S.toFixed(2)}
+Re ${n.Re.toFixed(2)}  innovation ${n.u.toFixed(2)}`;
+}
+function edgeTip(e) {
+  const s = App.sim;
+  return `#${e.s.id} → #${e.t.id}  ${e.type} · ${EDGE_CLASSES[edgeClass(e)].name}
+${s.clusters[e.s.c].name} → ${s.clusters[e.t.c].name}
+weight ${e.w.toFixed(3)}  flow ${e.F.toFixed(4)}  capacity ${e.C.toFixed(4)}
+congestion ${e.cong.toFixed(3)}  trust ${e.trust.toFixed(3)}  age ${e.age}`;
+}
+
+/* ---------------- canvas interaction ---------------- */
+function bindCanvas() {
+  const cv = $('view'), R = App.R, ptrs = new Map(); let drag = null, pinch = null, hoverPending = null;
+  cv.addEventListener('pointerdown', ev => { cv.setPointerCapture(ev.pointerId); ptrs.set(ev.pointerId, { x: ev.clientX, y: ev.clientY }); if (ptrs.size === 1) drag = { x: ev.clientX, y: ev.clientY, moved: false }; else if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: R.cam.z }; drag = null; } hideTip(); });
+  cv.addEventListener('pointermove', ev => {
+    if (ptrs.has(ev.pointerId)) {
+      const prev = ptrs.get(ev.pointerId); ptrs.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (ptrs.size === 2 && pinch) { const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y); zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, pinch.z * d / pinch.d / R.cam.z); return; }
+      if (drag) { if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) > 4) drag.moved = true; if (drag.moved) { R.cam.x -= (ev.clientX - prev.x) / R.cam.z; R.cam.y -= (ev.clientY - prev.y) / R.cam.z; cv.style.cursor = 'grabbing'; } }
+      return;
+    }
+    if (ev.pointerType !== 'mouse') return;
+    if (!hoverPending) { hoverPending = true; requestAnimationFrame(() => { hoverPending = false; const n = R.pickNode(App.sim, ev.clientX, ev.clientY); R.hover = n; if (n) showTip(ev.clientX, ev.clientY, nodeTip(n)); else { const e = R.pickEdge(App.sim, ev.clientX, ev.clientY); R.hoverEdge = e; if (e) showTip(ev.clientX, ev.clientY, edgeTip(e)); else hideTip(); } }); }
+  });
+  const up = ev => { ptrs.delete(ev.pointerId); if (ptrs.size < 2) pinch = null; if (drag && !drag.moved && ptrs.size === 0) onClick(ev.clientX, ev.clientY, ev.shiftKey); if (ptrs.size === 0) { drag = null; cv.style.cursor = App.mode === 'select' ? 'crosshair' : 'cell'; } };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', ev => { ptrs.delete(ev.pointerId); drag = null; pinch = null; });
+  cv.addEventListener('pointerleave', () => { R.hover = null; hideTip(); });
+  cv.addEventListener('wheel', ev => { ev.preventDefault(); zoomAt(ev.clientX, ev.clientY, Math.exp(-ev.deltaY * 0.0015)); }, { passive: false });
+}
+function zoomAt(sx, sy, f) { const R = App.R, [wx, wy] = R.s2w(sx, sy); R.cam.z = clamp(R.cam.z * f, 0.05, 12); const [wx2, wy2] = R.s2w(sx, sy); R.cam.x += wx - wx2; R.cam.y += wy - wy2; }
+function onClick(sx, sy, shift) {
+  const s = App.sim, R = App.R, n = R.pickNode(s, sx, sy);
+  if (App.mode === 'addEdge') {
+    if (!n) return; if (!R.pendingSrc) { R.pendingSrc = n; toast(`Source #${n.id}: now click the target`); return; }
+    if (n !== R.pendingSrc) { const src = R.pendingSrc; s.addEdge(src, n, 0.6, 0.7, 'social', false); s.rebuild(); s.log('user', 'intervention', 0, 0, `added edge #${src.id}→#${n.id}`); toast(`Edge #${src.id} → #${n.id} added`); }
+    R.pendingSrc = null; renderInspector(); return;
+  }
+  if (App.mode === 'cutEdge') { const e = R.pickEdge(s, sx, sy); if (e) { s.removeEdge(e); s.rebuild(); s.log('user', 'intervention', 0, 0, `cut edge #${e.s.id}→#${e.t.id}`); toast('Edge cut'); } return; }
+  if ((shift || App.mode === 'path') && R.sel && R.sel.alive && n && n !== R.sel) { R.path = shortestPath(s, R.sel, n); toast(R.path ? `Path: ${R.path.length - 1} hops` : 'No path (different components)'); showTab('insp'); return; }
+  if (n) { R.sel = n; R.selEdge = null; R.path = null; R.flowPath = null; showTab('insp'); return; }
+  const e = R.pickEdge(s, sx, sy);
+  if (e) { R.selEdge = e; R.sel = null; R.path = null; R.flowPath = null; showTab('insp'); } else { R.sel = null; R.selEdge = null; R.path = null; R.flowPath = null; if (App.tab === 'insp') renderInspector(); }
+}
+
+/* ---------------- export / import ---------------- */
+function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+const csvCell = v => typeof v === 'string' && /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+function exportAction(x) {
+  const s = App.sim, tag = `seed${App.seed}_t${s.t}`;
+  if (x === 'graph') download(`graph_${tag}.json`, JSON.stringify({
+    t: s.t, seed: App.seed, preset: App.preset, params: App.params, clusters: s.clusters.map(c => ({ id: c.id, name: c.name, wage: c.wage, cost: c.cost, members: c.members, demand: [...c.demand] })),
+    nodes: s.nodes.map(n => ({ id: n.id, cluster: n.c, x: +n.x.toFixed(2), y: +n.y.toFixed(2), state: n.state, fitness: n.fit, fitnessEff: n.fe, resource: n.R, income: n.inc, cost: n.exp, pressure: n.P, degree: n.deg, inDegree: n.in.length, outDegree: n.out.length, wIn: n.win, wOut: n.wout, eigenvector: n.eig, betweenness: n.betw, brokerage: n.broker, holeValue: n.hole, clustering: n.clust, reynolds: n.Re, innovation: n.u, match: n.match, employment: n.emp, applications: n.A, signal: n.S, skill: [...n.skill].map(v => +v.toFixed(4)) })),
+    edges: s.edges.map(e => ({ source: e.s.id, target: e.t.id, weight: e.w, flow: e.F, capacity: e.C, congestion: e.cong, trust: e.trust, age: e.age, type: e.type })),
+  }), 'application/json');
+  else if (x === 'metrics') { const h = s.hist, rows = [HIST_KEYS.join(',')]; for (let i = 0; i < h.t.length; i++) rows.push(HIST_KEYS.map(k => +(+h[k][i]).toPrecision(6)).join(',')); download(`metrics_${tag}.csv`, rows.join('\n'), 'text/csv'); }
+  else if (x === 'events') download(`events_${tag}.csv`, ['t,kind,metric,value,z,note,hash', ...s.events.map(e => [e.t, e.kind, e.metric, e.value, (+e.z).toFixed(3), e.note, e.hash].map(csvCell).join(','))].join('\n'), 'text/csv');
+  else if (x === 'eventsJson') download(`events_${tag}.json`, JSON.stringify(s.events, null, 1), 'application/json');
+  else if (x === 'save') { const st = s.toState(); st.preset = App.preset; download(`state_${tag}.json`, JSON.stringify(st), 'application/json'); }
+  else if (x === 'load') $('fileLoad').click();
+  else if (x === 'share') shareLink();
+  else if (x === 'png') { const a = document.createElement('a'); a.href = $('view').toDataURL('image/png'); a.download = `canvas_${tag}.png`; a.click(); }
+}
+function loadState(file) {
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const o = JSON.parse(rd.result); if (o.format !== 'adaptive-society-lab') throw new Error('not a saved simulation state');
+      const s = Sim.fromState(o); App.sim = s; App.params = s.p; App.seed = s.seed; App.preset = PRESETS[o.preset] ? o.preset : 'baseline';
+      App.R.reset(); App.R.fit(s, viewRect()); syncControls(); updateUi(true); toast(`Loaded state at t = ${s.t}`);
+    } catch (err) { toast('Load failed: ' + err.message); }
+  };
+  rd.readAsText(file);
+}
+function shareLink() {
+  const diff = {}; for (const d of PARAM_DEFS) if (App.params[d.k] !== d.def) diff[d.k] = App.params[d.k];
+  const h = '#cfg=' + btoa(unescape(encodeURIComponent(JSON.stringify({ seed: App.seed, preset: App.preset, p: diff }))));
+  try { history.replaceState(null, '', h); } catch (e) { }
+  const url = location.href.split('#')[0] + h;
+  (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => toast('Link with seed + parameters copied'), () => { prompt('Copy this link:', url); });
+}
+function readHash() {
+  if (!location.hash.startsWith('#cfg=')) return;
+  try { const o = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(5))))); if (o.preset && PRESETS[o.preset]) App.preset = o.preset; Object.assign(App.params, PRESETS[App.preset].params); for (const k in o.p || {}) if (PDEF[k]) App.params[k] = +o.p[k]; if (o.seed !== undefined) App.seed = o.seed >>> 0; } catch (e) { }
+}
+
+/* ---------------- research mode ---------------- */
+const R_METRICS = ['giniR', 'giniW', 'lccFrac', 'congestion', 'turbulence', 'modularity', 'clustering', 'pathLen', 'hubRatio', 'hill', 'avgR', 'stressedFrac', 'dormantFrac', 'unemployment', 'clusterConc', 'totalFlow', 'throughput', 'meanTrust', 'migrations', 'richClub', 'crossFlow', 'resilience', 'fragility', 'N', 'E', 'avgDeg', 'meanU', 'edgeLen', 'hubShare', 'top1Links', 'components', 'spFitDeg'];
+const STUDIES = [
+  { label: 'Pref. attachment α → inequality', x: ['alpha', 0, 2, 6], m: ['giniW', 'giniR', 'hubRatio', 'richClub'], show: 'giniW' },
+  { label: 'Migration cost → cluster concentration', x: ['migCost', 0, 10, 6], m: ['clusterConc', 'migrations', 'giniR', 'modularity'], show: 'clusterConc' },
+  { label: 'Automation → unemployment', x: ['automation', 0, 0.5, 6], m: ['unemployment', 'dormantFrac', 'migrations', 'giniR'], show: 'unemployment' },
+  { label: 'Application volume × signal quality', x: ['appVolume', 0.5, 8, 5], y: ['signalQuality', 0.2, 1, 4], m: ['unemployment', 'meanTrust', 'N'], show: 'unemployment' },
+  { label: 'Trust decay → fragmentation', x: ['trustDecay', 0, 0.04, 6], m: ['lccFrac', 'components', 'E', 'modularity'], show: 'lccFrac' },
+  { label: 'Edge capacity → turbulence', x: ['capLimit', 0.04, 0.4, 6], m: ['turbulence', 'congestion', 'giniR'], show: 'turbulence' },
+  { label: 'Distance friction → small world', x: ['gamma', 0, 4, 6], m: ['pathLen', 'clustering', 'edgeLen', 'modularity'], show: 'pathLen' },
+  { label: 'Innovation rate → modularity', x: ['innovRate', 0, 0.05, 6], m: ['modularity', 'meanU', 'crossFlow'], show: 'meanU' },
+];
+function buildResearch() {
+  const opts = PARAM_DEFS.map(d => `<option value="${d.k}">${esc(d.label)}</option>`).join('');
+  $('rX').innerHTML = opts; $('rY').innerHTML = '<option value="">— none —</option>' + opts;
+  $('rMetrics').innerHTML = R_METRICS.map(k => `<label><input type="checkbox" value="${k}" ${['giniR', 'lccFrac', 'congestion', 'turbulence', 'modularity', 'unemployment'].includes(k) ? 'checked' : ''}>${METRIC_LABELS[k]}</label>`).join('');
+  $('rPresets').innerHTML = STUDIES.map((s, i) => `<button data-st="${i}">${s.label}</button>`).join('');
+  $('rPresets').querySelectorAll('[data-st]').forEach(b => b.onclick = () => loadStudy(STUDIES[+b.dataset.st]));
+  const syncRange = (sel, mn, mx) => { const d = PDEF[$(sel).value]; if (d) { $(mn).value = d.min; $(mx).value = d.max; } };
+  $('rX').onchange = () => syncRange('rX', 'rXmin', 'rXmax'); $('rY').onchange = () => syncRange('rY', 'rYmin', 'rYmax');
+  $('rX').value = 'alpha'; syncRange('rX', 'rXmin', 'rXmax');
+  $('rRun').onclick = runSweep; $('rCancel').onclick = () => App.cancel = true;
+  $('rShow').onchange = () => drawResults();
+  $('rCsv').onclick = () => { const S = App.sweep; if (!S) return; const cols = ['x', ...(S.Y ? ['y'] : []), 'seed', ...S.metrics]; download('sweep.csv', [[S.X, ...(S.Y ? [S.Y] : []), 'seed', ...S.metrics].join(','), ...S.results.map(r => cols.map(c => r[c]).join(','))].join('\n'), 'text/csv'); };
+  $('rJson').onclick = () => { const S = App.sweep; if (S) download('sweep.json', JSON.stringify({ baseParams: S.base, sweep: { X: S.X, xs: S.xs, Y: S.Y, ys: S.ys, ticks: S.ticks, reps: S.reps }, results: S.results }, null, 1), 'application/json'); };
+  const c = $('rChart'); c.onmousemove = ev => chartHover(ev); c.onmouseleave = () => { hideTip(); App.chartHover = null; drawResults(); };
+}
+function loadStudy(st) {
+  $('rX').value = st.x[0]; $('rXmin').value = st.x[1]; $('rXmax').value = st.x[2]; $('rXn').value = st.x[3];
+  if (st.y) { $('rY').value = st.y[0]; $('rYmin').value = st.y[1]; $('rYmax').value = st.y[2]; $('rYn').value = st.y[3]; } else $('rY').value = '';
+  $('rMetrics').querySelectorAll('input').forEach(cb => cb.checked = st.m.includes(cb.value)); App.studyShow = st.show;
+  toast(`Loaded study: ${st.label}. Press Run.`);
+}
+const linspace = (a, b, n) => n < 2 ? [a] : Array.from({ length: n }, (_, i) => +(a + (b - a) * i / (n - 1)).toPrecision(6));
+const tickYield = () => new Promise(r => setTimeout(r, 0));
+async function runConfigs(configs, ticks, metrics, onProgress) {
+  const out = [], total = configs.length * ticks; let done = 0;
+  for (const cfg of configs) {
+    const s = new Sim(cfg.params, cfg.seed); const pr = PRESETS[App.preset]; if (pr && pr.after) pr.after(s);
+    let t0 = performance.now();
+    for (let t = 0; t < ticks; t++) { s.tick(); done++; if (performance.now() - t0 > 40) { onProgress(done / total); await tickYield(); t0 = performance.now(); if (App.cancel) return null; } }
+    const from = Math.floor(s.hist.t.length * 0.75), row = { ...cfg.tag };
+    for (const k of metrics) { const a = s.hist[k].slice(from); row[k] = +mean(a).toPrecision(6); }
+    out.push(row); onProgress(done / total, row);
+  }
+  return out;
+}
+async function runSweep() {
+  if (App.sweepBusy) return;
+  const X = $('rX').value, Y = $('rY').value || null, xs = linspace(+$('rXmin').value, +$('rXmax').value, clamp(+$('rXn').value | 0, 2, 40)), ys = Y ? linspace(+$('rYmin').value, +$('rYmax').value, clamp(+$('rYn').value | 0, 2, 20)) : [null];
+  const ticks = clamp(+$('rTicks').value | 0, 20, 5000), reps = clamp(+$('rReps').value | 0, 1, 10), metrics = [...$('rMetrics').querySelectorAll('input:checked')].map(c => c.value);
+  if (!metrics.length) { toast('Select at least one metric'); return; }
+  const base = { ...App.params, n0: +$('rN0').value, maxNodes: +$('rNmax').value }, configs = [];
+  for (const y of ys) for (const x of xs) for (let r = 0; r < reps; r++) { const p = { ...base, [X]: x }; if (Y) p[Y] = y; configs.push({ params: p, seed: (App.seed + r) >>> 0, tag: { x, ...(Y ? { y } : {}), seed: (App.seed + r) >>> 0 } }); }
+  App.sweep = { X, Y, xs, ys, ticks, reps, metrics, base, results: [] };
+  $('rShow').innerHTML = metrics.map(k => `<option value="${k}">${METRIC_LABELS[k]}</option>`).join(''); $('rShow').value = metrics.includes(App.studyShow) ? App.studyShow : metrics[0];
+  const wasPlaying = App.playing; setPlaying(false); App.sweepBusy = true; App.cancel = false; $('rRun').disabled = true;
+  const t0 = performance.now();
+  const res = await runConfigs(configs, ticks, metrics, (f, row) => { $('rBar').style.width = (100 * f).toFixed(1) + '%'; $('rStatus').textContent = `Running ${configs.length} runs × ${ticks} ticks … ${(100 * f).toFixed(0)}% · ${((performance.now() - t0) / 1000).toFixed(1)} s`; if (row) { App.sweep.results.push(row); drawResults(); } });
+  App.sweepBusy = false; $('rRun').disabled = false; if (wasPlaying) setPlaying(true);
+  $('rStatus').textContent = res ? `Done: ${configs.length} runs in ${((performance.now() - t0) / 1000).toFixed(1)} s. Values are means over the last 25% of each run.` : `Cancelled after ${App.sweep.results.length} runs.`;
+}
+function aggregate(S, k) { // mean ± sd per (x, y)
+  const g = new Map(); for (const r of S.results) { const key = r.x + '|' + (r.y ?? ''); if (!g.has(key)) g.set(key, { x: r.x, y: r.y, v: [] }); g.get(key).v.push(r[k]); }
+  return [...g.values()].map(o => ({ ...o, m: mean(o.v), sd: std(o.v) }));
+}
+function drawResults() {
+  const S = App.sweep; if (!S) return; const k = $('rShow').value, cv = $('rChart'), dpr = Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr; const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const cols = ['x', ...(S.Y ? ['y'] : []), 'seed', ...S.metrics];
+  $('rTable').innerHTML = `<tr>${[PDEF[S.X].label, ...(S.Y ? [PDEF[S.Y].label] : []), 'seed', ...S.metrics.map(m => METRIC_LABELS[m])].map(h => `<th>${esc(h)}</th>`).join('')}</tr>` + S.results.map(r => `<tr>${cols.map(c => `<td>${c === 'x' || c === 'y' || c === 'seed' ? r[c] : fmtKey(c, r[c])}</td>`).join('')}</tr>`).join('');
+  const agg = aggregate(S, k); if (!agg.length) return; const L = 56, Rr = 16, T = 22, B = 36;
+  ctx.font = '10px ui-monospace, monospace'; ctx.fillStyle = '#c3c2b7'; ctx.fillText(METRIC_LABELS[k] + (S.Y ? '' : ` vs ${PDEF[S.X].label}`), L, 14);
+  const xmin = S.xs[0], xmax = S.xs[S.xs.length - 1], X = v => L + (xmax > xmin ? (v - xmin) / (xmax - xmin) : 0.5) * (W - L - Rr);
+  App.chartGeom = null;
+  if (!S.Y) {
+    const all = S.results.map(r => r[k]); let lo = Math.min(...all), hi = Math.max(...all); if (hi - lo < 1e-9) { hi += 0.5; lo -= 0.5; } const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+    const Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+    ctx.strokeStyle = '#2c2c2a'; ctx.lineWidth = 1; ctx.fillStyle = '#898781';
+    for (let i = 0; i <= 4; i++) { const v = lo + (hi - lo) * i / 4; ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(W - Rr, Y(v)); ctx.stroke(); ctx.fillText(fmtKey(k, v), 4, Y(v) + 3); }
+    for (const x of S.xs) ctx.fillText(String(+x.toPrecision(3)), X(x) - 10, H - B + 14);
+    ctx.fillText(PDEF[S.X].label, L + (W - L - Rr) / 2 - 40, H - 6);
+    ctx.fillStyle = 'rgba(34,211,238,0.12)'; ctx.beginPath(); agg.forEach((a, i) => i ? ctx.lineTo(X(a.x), Y(a.m + a.sd)) : ctx.moveTo(X(a.x), Y(a.m + a.sd))); for (let i = agg.length - 1; i >= 0; i--) ctx.lineTo(X(agg[i].x), Y(agg[i].m - agg[i].sd)); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#6f7a8c'; for (const r of S.results) { ctx.beginPath(); ctx.arc(X(r.x), Y(r[k]), 2.5, 0, 6.283); ctx.fill(); }
+    ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2; ctx.beginPath(); agg.forEach((a, i) => i ? ctx.lineTo(X(a.x), Y(a.m)) : ctx.moveTo(X(a.x), Y(a.m))); ctx.stroke();
+    for (const a of agg) { ctx.fillStyle = '#070a12'; ctx.beginPath(); ctx.arc(X(a.x), Y(a.m), 4.5, 0, 6.283); ctx.fill(); ctx.fillStyle = '#22d3ee'; ctx.beginPath(); ctx.arc(X(a.x), Y(a.m), 3, 0, 6.283); ctx.fill(); }
+    if (App.chartHover) { const a = App.chartHover; ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.moveTo(X(a.x), T); ctx.lineTo(X(a.x), H - B); ctx.stroke(); }
+    App.chartGeom = { kind: 'line', agg, X, k };
+    $('rChartNote').textContent = `Line: mean over ${S.reps} seed(s); band: ±1 sd; dots: individual runs.`;
+  } else {
+    const nx = S.xs.length, ny = S.ys.length, cw = (W - L - Rr) / nx, ch = (H - T - B) / ny, vals = agg.map(a => a.m), lo = Math.min(...vals), hi = Math.max(...vals);
+    for (const a of agg) {
+      const i = S.xs.indexOf(a.x), j = S.ys.indexOf(a.y), v = hi > lo ? (a.m - lo) / (hi - lo) : 0.5; ctx.fillStyle = SEQ[Math.round(v * 8)];
+      ctx.fillRect(L + i * cw + 1, T + (ny - 1 - j) * ch + 1, cw - 2, ch - 2);
+      if (cw > 44 && ch > 18) { ctx.fillStyle = v > 0.6 ? '#070a12' : '#e8edf5'; ctx.fillText(fmtKey(k, a.m), L + i * cw + 4, T + (ny - 1 - j) * ch + ch / 2 + 3); }
+    }
+    ctx.fillStyle = '#898781'; S.xs.forEach((x, i) => ctx.fillText(String(+x.toPrecision(3)), L + i * cw + cw / 2 - 10, H - B + 14)); S.ys.forEach((y, j) => ctx.fillText(String(+y.toPrecision(3)), 6, T + (ny - 1 - j) * ch + ch / 2 + 3));
+    ctx.fillText(`${PDEF[S.X].label} →   ↑ ${PDEF[S.Y].label}`, L, H - 6);
+    App.chartGeom = { kind: 'heat', agg, L, T, cw, ch, nx, ny, k, S };
+    $('rChartNote').innerHTML = `Colour: mean ${esc(METRIC_LABELS[k])}, ${fmtKey(k, lo)} <span style="display:inline-block;width:90px;height:8px;vertical-align:middle;border-radius:2px;background:linear-gradient(90deg,${SEQ.join(',')})"></span> ${fmtKey(k, hi)}`;
+  }
+}
+function chartHover(ev) {
+  const g = App.chartGeom; if (!g) return; const r = $('rChart').getBoundingClientRect(), mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  if (g.kind === 'line') { let best = null; for (const a of g.agg) if (!best || Math.abs(g.X(a.x) - mx) < Math.abs(g.X(best.x) - mx)) best = a; App.chartHover = best; drawResults(); if (best) showTip(ev.clientX, ev.clientY, `${PDEF[App.sweep.X].label} = ${best.x}\n${METRIC_LABELS[g.k]}: ${fmtKey(g.k, best.m)} ± ${fmt(best.sd)}\nruns: ${best.v.map(v => fmtKey(g.k, v)).join(', ')}`); }
+  else { const i = Math.floor((mx - g.L) / g.cw), j = g.ny - 1 - Math.floor((my - g.T) / g.ch), a = g.agg.find(q => q.x === g.S.xs[i] && q.y === g.S.ys[j]); if (a) showTip(ev.clientX, ev.clientY, `${PDEF[g.S.X].label} = ${a.x}\n${PDEF[g.S.Y].label} = ${a.y}\n${METRIC_LABELS[g.k]}: ${fmtKey(g.k, a.m)} ± ${fmt(a.sd)}`); else hideTip(); }
+}
+const TESTS = [
+  { name: 'Triadic closure raises clustering', k: 'triadic', a: 0, b: 2.5, m: 'clustering', dir: 1 },
+  { name: 'Preferential attachment concentrates degree', k: 'alpha', a: 0, b: 1.8, m: 'hubRatio', dir: 1 },
+  { name: 'Distance friction shortens edges', k: 'gamma', a: 0, b: 3, m: 'edgeLen', dir: -1 },
+  { name: 'Fitness exponent drives fitness–degree coupling', k: 'fitMult', a: 0, b: 2, m: 'spFitDeg', dir: 1 },
+  { name: 'Migration cost suppresses migration', k: 'migCost', a: 0.5, b: 8, m: 'migrations', dir: -1 },
+  { name: 'Lower edge capacity increases congestion', k: 'capLimit', a: 0.4, b: 0.08, m: 'congestion', dir: 1 },
+];
+async function runControlledTests() {
+  if (App.sweepBusy) return; const wasPlaying = App.playing; setPlaying(false); App.sweepBusy = true; App.cancel = false; $('dRun').disabled = true;
+  const base = { ...App.params, n0: 350, maxNodes: 450 }, configs = [];
+  TESTS.forEach((T, i) => { for (const arm of ['a', 'b']) for (let r = 0; r < 2; r++) configs.push({ params: { ...base, [T.k]: T[arm] }, seed: (App.seed + r) >>> 0, tag: { test: i, arm } }); });
+  const res = await runConfigs(configs, 200, [...new Set(TESTS.map(T => T.m))], f => { const el = $('dStat'); if (el) el.textContent = `${(100 * f).toFixed(0)}%`; });
+  App.sweepBusy = false; if (wasPlaying) setPlaying(true); if (!res) return;
+  App.testHtml = TESTS.map((T, i) => {
+    const va = mean(res.filter(r => r.test === i && r.arm === 'a').map(r => r[T.m])), vb = mean(res.filter(r => r.test === i && r.arm === 'b').map(r => r[T.m])), ok = T.dir > 0 ? vb > va : vb < va;
+    return `<div class="diag"><div class="t"><span class="st st-${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✗'}</span><span>${esc(T.name)}</span></div><div class="v">${esc(PDEF[T.k].label)} ${T.a} → ${T.b}: ${esc(METRIC_LABELS[T.m])} ${fmtKey(T.m, va)} → ${fmtKey(T.m, vb)}</div></div>`;
+  }).join('') + `<div class="hint" style="padding:6px 10px">350 nodes, 200 ticks, 2 seeds per arm; means over the last 25% of each run. Other parameters as currently set.</div>`;
+  if (App.tab === 'diag') renderDiag();
+}
+
+/* ---------------- main loop & boot ---------------- */
+function frame(ts) {
+  const dt = Math.min(100, ts - (App.lastTs || ts)); App.lastTs = ts;
+  if (dt > 0) App.fps = App.fps * 0.93 + (1000 / dt) * 0.07;
+  if (App.playing && !App.sweepBusy) {
+    App.acc += App.speed; const t0 = performance.now(); let n = 0;
+    while (App.acc >= 1) { App.sim.tick(); App.acc -= 1; n++; if (performance.now() - t0 > 28) { App.acc = Math.min(App.acc, 1); break; } }
+    App.tickCount += n;
+  }
+  if (ts - App.tpsT > 1000) { App.tps = App.tickCount * 1000 / (ts - App.tpsT || 1); App.tickCount = 0; App.tpsT = ts; }
+  if (App.autoLod) {
+    const R = App.R;
+    if (App.fps < 28) { App.lowT += dt; if (App.lowT > 1500 && R.lod < 3) { R.lod++; App.lowT = 0; } } else App.lowT = 0;
+    if (App.fps > 52) { App.highT += dt; if (App.highT > 4000 && R.lod > 0) { R.lod--; App.highT = 0; } } else App.highT = 0;
+  }
+  App.R.draw(App.sim, dt || 16, App.playing);
+  if (ts - App.lastUi > 350) { App.lastUi = ts; updateUi(false); }
+  requestAnimationFrame(frame);
+}
+function bindGlobal() {
+  $('bPlay').onclick = () => setPlaying(!App.playing); $('bStep').onclick = stepOnce; $('bReset').onclick = () => resetSim(false);
+  $('bHelp').onclick = () => $('mHelp').classList.add('open'); $('hClose').onclick = () => $('mHelp').classList.remove('open');
+  $('bResearch').onclick = () => $('mResearch').classList.add('open'); $('rClose').onclick = () => $('mResearch').classList.remove('open');
+  for (const m of ['mHelp', 'mResearch']) $(m).addEventListener('click', ev => { if (ev.target === $(m)) $(m).classList.remove('open'); });
+  const menu = $('mExport');
+  $('bExport').onclick = ev => { ev.stopPropagation(); const r = $('bExport').getBoundingClientRect(); menu.style.top = (r.bottom + 4) + 'px'; menu.style.left = Math.min(window.innerWidth - 230, r.left) + 'px'; menu.classList.toggle('open'); };
+  document.addEventListener('click', () => menu.classList.remove('open'));
+  menu.querySelectorAll('[data-x]').forEach(b => b.onclick = () => { menu.classList.remove('open'); exportAction(b.dataset.x); });
+  $('fileLoad').onchange = () => { if ($('fileLoad').files[0]) loadState($('fileLoad').files[0]); $('fileLoad').value = ''; };
+  const tog = (btn, id) => $(btn).onclick = () => { const h = $(id).classList.toggle('hidden'); $(btn).classList.toggle('on', !h); if (!h && id === 'bottom') updateUi(true); };
+  tog('tL', 'left'); tog('tR', 'right'); tog('tB', 'bottom');
+  document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  for (const p of ['pane-metrics', 'pane-insp']) $(p).addEventListener('click', ev => { const el = ev.target.closest('[data-node]'); if (el) selectNodeById(+el.dataset.node); });
+  $('right').addEventListener('pointerenter', () => App.hoverRight = true); $('right').addEventListener('pointerleave', () => App.hoverRight = false);
+  window.addEventListener('resize', () => { App.R.resize(); updateUi(true); });
+  document.addEventListener('keydown', ev => {
+    const tg = ev.target.tagName; if (tg === 'INPUT' || tg === 'SELECT' || tg === 'TEXTAREA') return;
+    if (ev.code === 'Space') { ev.preventDefault(); setPlaying(!App.playing); }
+    else if (ev.key === 'ArrowRight' || ev.key === '.') stepOnce();
+    else if (ev.key === 'r' || ev.key === 'R') resetSim(false);
+    else if (ev.key === 'f' || ev.key === 'F') App.R.fit(App.sim, viewRect());
+    else if (ev.key === 'h' || ev.key === 'H' || ev.key === '?') $('mHelp').classList.toggle('open');
+    else if (ev.key === '[' || ev.key === ']') { const el = $('speed'); el.value = clamp(+el.value + (ev.key === ']' ? 0.2 : -0.2), -2, 1.4); el.oninput(); toast(`Speed ${$('speedV').textContent} ticks/frame`); }
+    else if (ev.key === 'Escape') { $('mHelp').classList.remove('open'); $('mResearch').classList.remove('open'); App.R.sel = null; App.R.selEdge = null; App.R.path = null; App.R.flowPath = null; setMode('select'); }
+  });
+}
+function boot() {
+  readHash();
+  App.R = new Renderer($('view'));
+  if (window.innerWidth < 900) { for (const [b, id] of [['tL', 'left'], ['tR', 'right']]) { $(id).classList.add('hidden'); $(b).classList.remove('on'); } }
+  App.sim = new Sim(App.params, App.seed);
+  buildLeft(); buildBottom(); buildResearch(); bindGlobal(); bindCanvas();
+  resetSim(false);
+  document.querySelectorAll('[data-preset]').forEach(b => b.classList.toggle('on', b.dataset.preset === App.preset));
+  requestAnimationFrame(frame);
+}
+if (typeof document !== 'undefined') boot();
+</script>
+</body>
+</html>
