@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Ashfall</title>
 <meta name="description" content="Ashfall: an endless first-person shooter with a tower defense layer. Hold the Halvard Dam while the ash-buried valley recovers around you. Single file, Three.js + WebGL2.">
 <style>
@@ -53,13 +53,59 @@ input[type=range]{padding:0;accent-color:var(--amber)}
 #hitm{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;opacity:0}
 #hitm i{position:absolute;left:12px;top:-2px;width:2px;height:9px;background:#fff;transform-origin:1px 15px;box-shadow:0 0 2px #000}
 #hitm.head i{background:#ffcf6b;height:11px}
-#scope{position:fixed;inset:0;pointer-events:none;opacity:0;
-  background:radial-gradient(circle at 50% 50%,transparent 0,transparent 33vh,#000 33.4vh)}
-#scope:before,#scope:after{content:"";position:absolute;background:#000}
-#scope:before{left:50%;top:17vh;bottom:17vh;width:1px}
-#scope:after{top:50%;left:calc(50% - 33vh);right:calc(50% - 33vh);height:1px}
-#scopeMarks{position:fixed;left:50%;top:50%;pointer-events:none;opacity:0}
-#scopeMarks i{position:absolute;left:-6px;width:12px;height:1px;background:#000}
+#scopeC{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:0}
+html,body{touch-action:none;overscroll-behavior:none;-webkit-touch-callout:none}
+/* ---- touch controls ---- */
+#touch{position:fixed;inset:0;z-index:5;-webkit-user-select:none;user-select:none}
+#tzLeft{position:absolute;left:0;bottom:0;width:45%;height:78%}
+#tzRight{position:absolute;right:0;top:0;width:55%;height:100%}
+#tJoy{position:absolute;width:128px;height:128px;margin:-64px 0 0 -64px;border-radius:50%;border:2px solid rgba(236,230,220,.35);background:rgba(20,18,15,.25);opacity:0;pointer-events:none;transition:opacity .15s}
+#tJoy.on{opacity:1}
+#tJoy:after{content:"";position:absolute;inset:38%;border-radius:50%;border:1px dashed rgba(236,230,220,.2)}
+#tKnob{position:absolute;left:50%;top:50%;width:56px;height:56px;border-radius:50%;background:rgba(236,230,220,.55);transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.tb{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;border-radius:50%;width:58px;height:58px;background:rgba(18,16,13,.55);border:1.5px solid rgba(236,230,220,.35);color:#ece6dc;font:700 10px/1.1 var(--sans);letter-spacing:.06em;touch-action:none;padding:4px}
+.tb.down,.tb.lit{background:rgba(168,116,44,.8);border-color:#ffd796}
+#tFire{width:92px;height:92px;right:calc(26px + env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));font-size:13px;background:rgba(150,40,25,.55);border-color:rgba(255,160,130,.6)}
+#tAds{right:calc(136px + env(safe-area-inset-right,0px));bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+#tJump{right:calc(36px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:52px;height:52px}
+#tCrouch{right:calc(100px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));width:52px;height:52px}
+#tProne{right:calc(164px + env(safe-area-inset-right,0px));bottom:calc(30px + env(safe-area-inset-bottom,0px));width:48px;height:48px}
+#tReload{right:calc(134px + env(safe-area-inset-right,0px));bottom:calc(190px + env(safe-area-inset-bottom,0px));width:52px;height:52px}
+#tNade{right:calc(60px + env(safe-area-inset-right,0px));bottom:calc(196px + env(safe-area-inset-bottom,0px));width:50px;height:50px}
+#tUse{right:calc(206px + env(safe-area-inset-right,0px));bottom:calc(150px + env(safe-area-inset-bottom,0px));width:66px;height:66px;background:rgba(60,90,50,.65)}
+#tPlace{display:none;right:calc(26px + env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));width:92px;height:92px;background:rgba(60,110,60,.6);font-size:13px}
+.tbar{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);display:flex;gap:8px;margin-top:44px}
+#tWheel{background:rgba(60,52,40,.75);border-color:rgba(232,163,60,.6)}
+.tbar .tb{position:static;width:auto;height:auto;border-radius:4px;padding:7px 11px;font-size:10px}
+#tReady{background:rgba(168,116,44,.8)}
+body.tdrone #tFire,body.tdrone #tAds,body.tdrone #tJump,body.tdrone #tCrouch,body.tdrone #tProne,body.tdrone #tNade{display:none}
+body.tdrone #tPlace{display:flex}
+#rotate{position:fixed;inset:auto 12px 12px 12px;z-index:30;background:rgba(20,17,13,.92);border:1px solid var(--line);padding:12px 14px;text-align:center;font-size:14px;border-radius:4px}
+body.touch #prompt{top:auto;bottom:calc(150px + env(safe-area-inset-bottom,0px));left:auto;right:calc(290px + env(safe-area-inset-right,0px));transform:none;font-size:12px}
+body.touch #hBotL{bottom:auto;top:92px;width:170px}
+body.touch #hBotR{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px));right:calc(140px + env(safe-area-inset-right,0px))}
+body.touch #ammo{font-size:22px}
+body.touch #wname,body.touch #gren{display:none}
+body.touch #subs{bottom:auto;top:96px;font-size:12px;width:min(520px,52vw)}
+body.touch #hint{top:auto;bottom:10px;font-size:12px;max-width:44vw}
+body.touch #feed{top:44%}
+body.touch #buildbar{display:none}
+body.touch #buildinfo{bottom:16px}
+body.touch #dronecur{width:34px;height:34px;margin:-17px 0 0 -17px;border-width:2px}
+body.touch #fpsbox{display:none}
+@media (max-width:900px),(max-height:520px){
+  #hTopL .wave{font-size:16px} #hTopL .sub{font-size:10px} #hTopL .salv{font-size:12px;margin-top:2px}
+  #minimap{width:110px;height:110px} #combo{top:126px}
+  #compass{width:280px;top:6px} #compass canvas{width:280px;height:22px}
+  #hBotL{width:180px} #ammo{font-size:24px} #wname{font-size:10px}
+  #banner{font-size:22px;top:24%} #feed{font-size:11px} #hint{top:16%;font-size:12px;max-width:70vw}
+  .menu .box{min-width:0;width:calc(100vw - 32px);padding:16px 18px;max-height:92vh}
+  .menu .row label{min-width:110px}
+  #title .wrap{padding:0 16px 5vh 16px} #title .tag{font-size:13px;margin:10px 0 14px}
+  #buildbar{flex-wrap:wrap;justify-content:center;width:96vw} #buildbar div{min-width:0;padding:4px 6px;font-size:10px}
+  .card{width:min(220px,80vw)}
+  #notes{font-size:13px;padding:14px 16px}
+}
 #feed{position:absolute;left:50%;top:60%;transform:translateX(-50%);text-align:center;font:700 13px var(--sans);letter-spacing:.14em}
 #feed div{animation:fadeup 1.6s forwards}
 @keyframes fadeup{0%{opacity:0;transform:translateY(6px)}10%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
@@ -121,8 +167,8 @@ input[type=range]{padding:0;accent-color:var(--amber)}
 .keys button{padding:3px 10px;font:12px var(--mono);text-transform:none;min-width:90px}
 .tabs{display:flex;gap:6px;margin-bottom:12px}
 .tabs button.on{border-color:var(--amber);color:#fff}
-#wheel{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:radial-gradient(circle,rgba(10,9,8,.15),rgba(10,9,8,.55))}
-#wheel canvas{width:min(78vmin,600px);height:min(78vmin,600px)}
+#wheel{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;pointer-events:none;background:radial-gradient(circle,rgba(10,9,8,.15),rgba(10,9,8,.55))}
+#wheel canvas{width:min(78vmin,600px);height:min(78vmin,600px);pointer-events:auto;touch-action:none}
 #mapov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(8,7,6,.7);pointer-events:none}
 #mapov canvas{width:min(84vh,84vw);height:min(84vh,84vw);border:1px solid var(--line)}
 #notes{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,90vw);background:#d8cfbd;color:#2a241c;padding:22px 26px;font:15px/1.5 Georgia,serif;box-shadow:0 10px 40px rgba(0,0,0,.7);pointer-events:none;transform-origin:center}
@@ -162,12 +208,21 @@ input[type=range]{padding:0;accent-color:var(--amber)}
   </div>
 </div>
 <div id="lowhp"></div>
-<div id="scope"></div><div id="scopeMarks"></div>
+<canvas id="scopeC"></canvas>
 <div id="dronehud" class="hidden"><div class="frame"></div>
   <div class="tl"><span class="rec">● REC</span> RQ-7 RECON<br>ALT <span id="dAlt">80</span> m<br>BATT <span id="dBat">100</span>%<br>T×0.25</div>
   <div id="dronecur"></div><div id="buildinfo"></div><div id="buildbar"></div>
 </div>
 <div id="wheel" class="hidden"><canvas id="wheelC" width="1200" height="1200"></canvas></div>
+<div id="touch" class="hidden">
+  <div id="tzRight"></div><div id="tzLeft"></div>
+  <div id="tJoy"><div id="tKnob"></div></div>
+  <div class="tb" id="tFire">FIRE</div><div class="tb" id="tPlace">PLACE</div><div class="tb" id="tAds">AIM</div>
+  <div class="tb" id="tJump">JUMP</div><div class="tb" id="tCrouch">CROUCH</div><div class="tb" id="tProne">PRONE</div>
+  <div class="tb" id="tReload">RELOAD</div><div class="tb" id="tNade">GRENADE</div><div class="tb hidden" id="tUse">USE</div>
+  <div class="tbar"><div class="tb hidden" id="tReady">START WAVE</div><div class="tb" id="tWheel">WEAPON</div><div class="tb" id="tDrone">DRONE</div><div class="tb" id="tMap">MAP</div><div class="tb" id="tPause">II</div></div>
+</div>
+<div id="rotate" class="hidden">Turn your phone sideways for the best view. Tap to dismiss.</div>
 <div id="mapov" class="hidden"><canvas id="mapC" width="900" height="900"></canvas></div>
 <div id="notes" class="hidden"></div>
 
@@ -181,7 +236,7 @@ input[type=range]{padding:0;accent-color:var(--amber)}
     <button id="bSettings">Settings</button>
   </div>
   <div class="seedrow">Seed <input id="seedIn" size="16" placeholder="random"> <span id="xpTxt"></span></div>
-  <div class="ver">Click to capture the mouse · Esc pauses</div>
+  <div class="ver">Mouse &amp; keyboard or touch · Esc pauses</div>
 </div></div>
 
 <div id="pause" class="menu hidden"><div class="box">
@@ -629,7 +684,7 @@ function saveProfile() { store.set('ashfall.profile', PROFILE); }
 
 // Permanent unlocks (XP earned across runs)
 const UNLOCKS = [
-  { id: 'opt_reddot', xp: 0, name: 'Red-dot optic', kind: 'Attachment', desc: 'Rifle / LMG / pistol. Tighter ADS spread.' },
+  { id: 'opt_reddot', xp: 0, name: 'Red-dot optic', kind: 'Attachment', desc: 'Scope on the rifle, red dot on LMG and pistol.' },
   { id: 'def_flood', xp: 0, name: 'Floodlight tower', kind: 'Defense', desc: 'Reveals enemies at night; glare ruins their aim.' },
   { id: 'att_supp', xp: 900, name: 'Suppressor', kind: 'Attachment', desc: 'Quieter, harder to locate. −5% velocity.' },
   { id: 'def_mortar', xp: 1200, name: 'Mortar emplacement', kind: 'Defense', desc: '80–600 m indirect fire, high arc.' },
@@ -663,7 +718,7 @@ window.addEventListener('mousemove', (e) => {
   if (IN.locked || GAME.state === 'playing') { IN.mdx += e.movementX || 0; IN.mdy += e.movementY || 0; }
 });
 window.addEventListener('mousedown', (e) => {
-  if (GAME.state !== 'playing') return;
+  if (GAME.state !== 'playing' || Date.now() - (TOUCH.last || 0) < 900) return;
   if (e.button === 0) { IN.lmb = true; IN.lmbPressed = true; }
   if (e.button === 2) { IN.rmb = true; IN.rmbPressed = true; }
   if (!IN.locked && !GAME.modal) requestLock();
@@ -676,7 +731,7 @@ document.addEventListener('pointerlockchange', () => {
   if (!IN.locked && GAME.state === 'playing' && !GAME.modal && !GAME.ignoreUnlock) pauseGame();
   GAME.ignoreUnlock = false;
 });
-function requestLock() { try { const p = $('gl').requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
+function requestLock() { if (typeof TOUCH !== 'undefined' && TOUCH.on) return; try { const p = $('gl').requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (e) { } }
 function releaseLock(ignore) { if (document.pointerLockElement) { GAME.ignoreUnlock = !!ignore; document.exitPointerLock(); } }
 function endInputFrame() { IN.pressed.clear(); IN.mdx = IN.mdy = 0; IN.lmbPressed = IN.rmbPressed = false; IN.wheel = 0; }
 
@@ -2190,7 +2245,7 @@ function initWeatherParticles() {
 function pattern(n, fn) { const a = []; for (let i = 0; i < n; i++) a.push(fn(i)); return a; }
 const WEAPONS = [
   { id: 'rifle', key: 'w1', name: 'SERVICE RIFLE', cal: '5.56×45 mm', v0: 910, mass: 0.004, diam: 0.0057, cd: 0.3, dmg: 34, near: 30, far: 320, minPct: 0.6,
-    rpm: 750, modes: ['AUTO', 'SEMI'], mag: 30, reserve: 300, reload: 2.4, tacReload: 1.95, draw: 0.5, zoom: 1.35, opticZoom: 2.5, adsTime: 0.2, sound: 'rifle', pellets: 1,
+    rpm: 750, modes: ['AUTO', 'SEMI'], mag: 30, reserve: 300, reload: 2.4, tacReload: 1.95, draw: 0.5, zoom: 1.35, opticZoom: 4, adsTime: 0.2, sound: 'rifle', pellets: 1,
     spread: { base: 0.0016, ads: 0.0003, move: 0.0045, heat: 0.011, air: 0.03 }, heatPer: 0.12, heatTau: 0.32, suppress: 1,
     recoil: pattern(30, i => [0.0105 - Math.min(i, 12) * 0.00025, 0.0032 * (i < 7 ? 0.7 : Math.sin(i * 0.5) * 1.3)]), recoilNoise: 0.0011, kickBack: 0.035 },
   { id: 'shotgun', key: 'w2', name: 'PUMP SHOTGUN', cal: '12 ga 00 buck', v0: 400, mass: 0.0035, diam: 0.0084, cd: 0.47, dmg: 17, near: 8, far: 32, minPct: 0.15,
@@ -2198,7 +2253,7 @@ const WEAPONS = [
     spread: { base: 0.003, ads: 0.0015, move: 0.004, heat: 0.004, air: 0.02 }, heatPer: 0.2, heatTau: 0.5, knock: 1, suppress: 1.2,
     recoil: pattern(6, i => [0.055, 0.004]), recoilNoise: 0.006, kickBack: 0.11, pump: 0.62 },
   { id: 'marksman', key: 'w3', name: 'MARKSMAN RIFLE', cal: '7.62×51 mm', v0: 830, mass: 0.0095, diam: 0.00782, cd: 0.29, dmg: 72, near: 60, far: 650, minPct: 0.75,
-    rpm: 280, modes: ['SEMI'], mag: 20, reserve: 100, reload: 2.9, tacReload: 2.4, draw: 0.6, zoom: 4, scope: true, adsTime: 0.32, sound: 'marksman', pellets: 1,
+    rpm: 280, modes: ['SEMI'], mag: 20, reserve: 100, reload: 2.9, tacReload: 2.4, draw: 0.6, zoom: 6, scope: true, adsTime: 0.32, sound: 'marksman', pellets: 1,
     spread: { base: 0.004, ads: 0.00012, move: 0.006, heat: 0.004, air: 0.04 }, heatPer: 0.25, heatTau: 0.4, suppress: 1.4,
     recoil: pattern(20, i => [0.032, 0.006 * Math.sin(i * 1.7)]), recoilNoise: 0.002, kickBack: 0.06 },
   { id: 'lmg', key: 'w4', name: 'LIGHT MACHINE GUN', cal: '5.56×45 mm belt', v0: 915, mass: 0.004, diam: 0.0057, cd: 0.3, dmg: 32, near: 35, far: 380, minPct: 0.55,
@@ -2431,9 +2486,10 @@ function buildViewmodels() {
   { // marksman
     const g = new THREE.Group();
     B(g, tan, 0, 0, -0.12, 0.065, 0.085, 0.5); C(g, black, 0, 0.015, -0.66, 0.012, 0.36); B(g, tan, 0, -0.005, -0.44, 0.07, 0.075, 0.24);
-    C(g, black, 0, 0.1, -0.12, 0.02, 0.3); C(g, black, 0, 0.1, -0.29, 0.027, 0.06); C(g, black, 0, 0.1, 0.04, 0.024, 0.05);
-    B(g, black, 0, 0.068, -0.12, 0.02, 0.03, 0.06); B(g, black, 0, -0.08, -0.15, 0.04, 0.14, 0.08, 0.1); B(g, tan, 0, -0.01, 0.22, 0.055, 0.1, 0.24);
-    arms(g, 0, -0.44); models.marksman = { g, muzzle: new THREE.Vector3(0, 0.015, -0.85), sightY: 0.1, hip: new THREE.Vector3(0.15, -0.16, -0.36) };
+    const sc = buildScope({ length: 0.32, tube: 0.0127, obj: 0.026, eye: 0.02, turret: 0.0095, rings: [-0.07, -0.21], color: 0x1d1e1c });
+    sc.position.set(0, 0.1, 0.05); g.add(sc);
+    B(g, black, 0, -0.08, -0.15, 0.04, 0.14, 0.08, 0.1); B(g, tan, 0, -0.01, 0.22, 0.055, 0.1, 0.24);
+    arms(g, 0, -0.44); models.marksman = { g, muzzle: new THREE.Vector3(0, 0.015, -0.85), sightY: 0.1, hip: new THREE.Vector3(0.15, -0.17, -0.36) };
   }
   { // LMG
     const g = new THREE.Group();
@@ -2462,12 +2518,8 @@ function buildViewmodels() {
     const m = models[id];
     m.optic = new THREE.Group();
     if (id === 'rifle') {
-      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.13, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0x232426, roughness: 0.5, metalness: 0.5, side: THREE.DoubleSide }));
-      tube.rotation.x = Math.PI / 2; tube.position.set(0, 0.078, -0.11); m.optic.add(tube);
-      B(m.optic, black, 0, 0.05, -0.11, 0.02, 0.03, 0.05);
-      const ret = new THREE.MeshBasicMaterial({ color: 0xff3a20 });
-      B(m.optic, ret, 0, 0.0735, -0.17, 0.0009, 0.007, 0.0005); B(m.optic, ret, -0.0045, 0.078, -0.17, 0.006, 0.0009, 0.0005); B(m.optic, ret, 0.0045, 0.078, -0.17, 0.006, 0.0009, 0.0005);
-      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0011, 6, 4), ret); dot.position.set(0, 0.078, -0.169); m.optic.add(dot);
+      const sc = buildScope({ length: 0.17, tube: 0.0125, obj: 0.021, eye: 0.017, turret: 0.0075, rings: [-0.05, -0.12] });
+      sc.position.set(0, 0.078, -0.02); m.optic.add(sc);
     } else B(m.optic, black, 0, 0.075, -0.1, 0.035, 0.035, 0.06); const lens = B(m.optic, new THREE.MeshBasicMaterial({ color: 0x223322, transparent: true, opacity: 0.35 }), 0, 0.078, -0.1, 0.028, 0.026, 0.002);
     if (id !== 'rifle') { const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0012, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); dot.position.set(0, 0.078, -0.13); m.optic.add(dot); } else lens.visible = false;
     m.optic.visible = false; m.g.add(m.optic);
@@ -2553,11 +2605,14 @@ function updatePlayer(dt) {
   // movement intent
   let mx = 0, mz = 0;
   if (ctrl) { if (act('forward')) mz += 1; if (act('back')) mz -= 1; if (act('right')) mx += 1; if (act('left')) mx -= 1; }
+  let analog = 1;
+  if (ctrl && TOUCH.on && (TOUCH.jx || TOUCH.jy)) { mx += TOUCH.jx; mz += TOUCH.jy; analog = clamp(Math.hypot(TOUCH.jx, TOUCH.jy) * 1.15, 0.25, 1); }
   const ml = Math.hypot(mx, mz); if (ml > 0) { mx /= ml; mz /= ml; }
-  PL.sprint = ctrl && act('sprint') && mz > 0.3 && PL.stance === 'stand' && PL.ads < 0.3 && !PL.overheatLock;
+  const stickSprint = TOUCH.on && TOUCH.jy > 0.9 && Math.hypot(TOUCH.jx, TOUCH.jy) > 0.97;
+  PL.sprint = ctrl && (act('sprint') && !(PL.ads > 0.5) || stickSprint) && mz > 0.3 && PL.stance === 'stand' && PL.ads < 0.3 && !PL.overheatLock;
   const gunning = ctrl && IN.lmb && PL.sprint; // run-and-gun: keep running, bring the gun up
   let speed = PL.stance === 'prone' ? 1.1 : PL.stance === 'crouch' ? 2.3 : PL.sprint ? (gunning ? 6.0 : 6.8) : 4.3;
-  speed *= 1 - 0.38 * PL.ads;
+  speed *= (1 - 0.38 * PL.ads) * analog;
   if (PL.reloading && PL.sprint) speed *= 0.9;
   const fx = -Math.sin(PL.yaw), fz = -Math.cos(PL.yaw), rx = Math.cos(PL.yaw), rz = -Math.sin(PL.yaw);
   const tvx = (fx * mz + rx * mx) * speed, tvz = (fz * mz + rz * mx) * speed;
@@ -2667,7 +2722,7 @@ function startReload(w, st) {
 }
 const _fd = new THREE.Vector3(), _fr = new THREE.Vector3(), _fu = new THREE.Vector3(), _fp = new THREE.Vector3();
 function aimBasis() {
-  _e1.set(PL.pitch + PL.rec.p, PL.yaw + PL.rec.y, -PL.lean * 0.2, 'YXZ'); _q1.setFromEuler(_e1);
+  _e1.set(PL.pitch + PL.rec.p + SCOPE.bp, PL.yaw + PL.rec.y + SCOPE.by, -PL.lean * 0.2, 'YXZ'); _q1.setFromEuler(_e1);
   _fd.set(0, 0, -1).applyQuaternion(_q1); _fr.set(1, 0, 0).applyQuaternion(_q1); _fu.set(0, 1, 0).applyQuaternion(_q1);
 }
 function fireWeapon(w, st) {
@@ -4173,6 +4228,7 @@ function updateDrone(rdt) {
   // pan with WASD, cursor with the mouse, Q/E rotate the placement
   const sp = 45 * rdt * (act('sprint') ? 2.2 : 1);
   let mx = 0, mz = 0; if (act('forward')) mz += 1; if (act('back')) mz -= 1; if (act('right')) mx += 1; if (act('left')) mx -= 1;
+  if (TOUCH.on) { mx += TOUCH.jx; mz += TOUCH.jy; }
   const fx = -Math.sin(DRONE.yaw), fz = -Math.cos(DRONE.yaw), rx = Math.cos(DRONE.yaw), rz = -Math.sin(DRONE.yaw);
   DRONE.pos.x = clamp(DRONE.pos.x + (fx * mz + rx * mx) * sp, -HALF + 10, HALF - 10); DRONE.pos.z = clamp(DRONE.pos.z + (fz * mz + rz * mx) * sp, -HALF + 10, DAMZ + 20);
   DRONE.pos.y += (heightAt(DRONE.pos.x, DRONE.pos.z) + DRONE.alt - DRONE.pos.y) * (1 - Math.exp(-rdt * 2));
@@ -4335,6 +4391,339 @@ function updateLightPools() {
   for (let i = 0; i < n; i++) { const l = A[i]; WU.uLP.value[i].set(l.x, l.y, l.z); WU.uLC.value[i].set(l.c[0] * l.i, l.c[1] * l.i, l.c[2] * l.i); WU.uLR.value[i] = l.r; }
   WU.uNL.value = n;
   for (const d of DEF.list) if (d.type === 'flood' && d.mesh.userData.lens) d.mesh.userData.lens.material.color.setRGB(nightK > 0.05 ? 3 : 0.35, nightK > 0.05 ? 3 : 0.35, nightK > 0.05 ? 2.8 : 0.33);
+}
+
+// =====================================================================
+//  OPTICS: detailed scope models + magnified scope view (reticle, BDC, rangefinder)
+// =====================================================================
+// Lens coating: a dark glass disc with the purple / green / amber reflections of multicoated optics
+function lensTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  let gr = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+  gr.addColorStop(0, '#05080a'); gr.addColorStop(0.55, '#0b1418'); gr.addColorStop(0.8, '#1d2c3a'); gr.addColorStop(0.93, '#3a2552'); gr.addColorStop(1, '#0a0a0c');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  gr = g.createRadialGradient(44, 40, 2, 44, 40, 40); gr.addColorStop(0, 'rgba(120,255,190,.55)'); gr.addColorStop(0.4, 'rgba(90,60,200,.25)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  gr = g.createRadialGradient(88, 90, 1, 88, 90, 22); gr.addColorStop(0, 'rgba(255,190,90,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 3; g.beginPath(); g.arc(64, 64, 50, 3.5, 4.3); g.stroke();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+// Builds a riflescope along -Z: lathe-turned body with bells, turrets with knurling and
+// index marks, illumination dial, rubber eyecup, coated lenses, rings with cross-bolts.
+function buildScope(o) {
+  const grp = new THREE.Group();
+  const anod = new THREE.MeshStandardMaterial({ color: o.color || 0x1b1c1e, roughness: 0.38, metalness: 0.55 });
+  const rubber = new THREE.MeshStandardMaterial({ color: 0x0f0f10, roughness: 0.95, metalness: 0 });
+  const knurl = new THREE.MeshStandardMaterial({ color: 0x26272a, roughness: 0.65, metalness: 0.5, flatShading: true });
+  const steel = new THREE.MeshStandardMaterial({ color: 0x8a8d90, roughness: 0.3, metalness: 0.9 });
+  const white = new THREE.MeshBasicMaterial({ color: 0xd8d4c8 });
+  const lens = new THREE.MeshStandardMaterial({ map: LENS_TEX, emissiveMap: LENS_TEX, emissive: 0xffffff, emissiveIntensity: 0.35, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.92 });
+  const L = o.length, rT = o.tube, rO = o.obj, rE = o.eye;
+  // body profile (radius, distance from the ocular end)
+  const P = [[rE * 0.82, 0], [rE, 0.004], [rE, L * 0.16], [rE * 0.9, L * 0.2], [rT, L * 0.27], [rT, L * 0.62], [rT * 1.03, L * 0.66], [rO * 0.92, L * 0.82], [rO, L * 0.86], [rO, L * 0.985], [rO * 0.93, L]];
+  const body = new THREE.Mesh(new THREE.LatheGeometry(P.map(([r, y]) => new THREE.Vector2(r, y)), 40), anod);
+  body.material.side = THREE.DoubleSide; body.geometry.rotateX(-Math.PI / 2); grp.add(body);
+  // eyecup + sunshade lip
+  const cup = new THREE.Mesh(new THREE.LatheGeometry([[rE * 0.86, -0.012], [rE * 1.12, -0.01], [rE * 1.14, 0.004], [rE * 1.02, 0.012]].map(([r, y]) => new THREE.Vector2(r, y)), 32), rubber);
+  cup.material.side = THREE.DoubleSide; cup.geometry.rotateX(-Math.PI / 2); grp.add(cup);
+  // power / focus ring knurling on the ocular bell
+  for (let i = 0; i < 26; i++) {
+    const a = i / 26 * TAU, k = new THREE.Mesh(new THREE.BoxGeometry(0.0024, 0.0016, L * 0.1), knurl);
+    k.position.set(Math.cos(a) * rE * 1.01, Math.sin(a) * rE * 1.01, -L * 0.08); k.rotation.z = a; grp.add(k);
+  }
+  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.0007, 0.004, 0.0007), white); mag.position.set(0, rE * 1.02, -L * 0.03); grp.add(mag);
+  // turrets: elevation (top), windage (right), illumination / parallax (left)
+  const turret = (axis, r, h, z, caps) => {
+    const t = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.1, r * 1.25, h * 0.35, 24), anod); base.position.y = rT + h * 0.12; t.add(base);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h * 0.6, 28, 1), knurl); cap.position.y = rT + h * 0.55; t.add(cap);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.96, r, h * 0.08, 28), anod); top.position.y = rT + h * 0.88; t.add(top);
+    for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; const m = new THREE.Mesh(new THREE.BoxGeometry(0.0006, i % 5 ? h * 0.12 : h * 0.22, 0.0006), white); m.position.set(Math.cos(a) * r * 1.01, rT + h * 0.42, Math.sin(a) * r * 1.01); t.add(m); }
+    if (caps) { const ind = new THREE.Mesh(new THREE.BoxGeometry(0.0008, h * 0.2, 0.0008), white); ind.position.set(0, rT + h * 0.16, r * 1.26); t.add(ind); }
+    t.position.z = z;
+    if (axis === 'x') t.rotation.z = -Math.PI / 2; else if (axis === '-x') t.rotation.z = Math.PI / 2;
+    grp.add(t); return t;
+  };
+  turret('y', o.turret, o.turret * 2.6, -L * 0.45, true);
+  turret('x', o.turret, o.turret * 2.6, -L * 0.45, true);
+  const illum = turret('-x', o.turret * 0.85, o.turret * 2.0, -L * 0.45, false);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(o.turret * 0.18, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3020 })); led.position.set(0, rT + o.turret * 1.75, 0); illum.add(led);
+  // saddle under the turrets
+  const sad = new THREE.Mesh(new THREE.BoxGeometry(rT * 2.3, rT * 2.3, L * 0.16), anod); sad.position.z = -L * 0.45; grp.add(sad);
+  // lenses: ocular and objective
+  const eyeL = new THREE.Mesh(new THREE.CircleGeometry(rE * 0.8, 28), lens); eyeL.position.z = -0.002; grp.add(eyeL);
+  const objL = new THREE.Mesh(new THREE.CircleGeometry(rO * 0.88, 32), lens); objL.position.z = -L * 0.97; objL.rotation.y = Math.PI; grp.add(objL);
+  // scope rings with cross-bolts and a picatinny base
+  for (const z of o.rings) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(rT * 1.12, rT * 0.18, 10, 32), anod); ring.position.z = z; grp.add(ring);
+    const cl = new THREE.Mesh(new THREE.BoxGeometry(rT * 1.6, rT * 1.4, rT * 0.7), anod); cl.position.set(0, -rT * 1.5, z); grp.add(cl);
+    for (const sx of [-1, 1]) { const sc = new THREE.Mesh(new THREE.CylinderGeometry(rT * 0.14, rT * 0.14, rT * 0.2, 8), steel); sc.rotation.z = Math.PI / 2; sc.position.set(sx * rT * 0.82, -rT * 1.5, z); grp.add(sc); }
+    const lever = new THREE.Mesh(new THREE.BoxGeometry(rT * 0.3, rT * 1.2, rT * 0.5), anod); lever.position.set(rT * 0.95, -rT * 2.0, z); lever.rotation.z = 0.3; grp.add(lever);
+  }
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(rT * 1.5, rT * 0.5, L * 0.85), anod); rail.position.set(0, -rT * 2.35, -L * 0.48); grp.add(rail);
+  for (let i = 0; i < 9; i++) { const sl = new THREE.Mesh(new THREE.BoxGeometry(rT * 1.55, rT * 0.18, 0.002), knurl); sl.position.set(0, -rT * 2.12, -L * 0.1 - i * L * 0.095); grp.add(sl); }
+  // serial / brand engraving band
+  const band = new THREE.Mesh(new THREE.BoxGeometry(0.0006, 0.0012, L * 0.12), white); band.position.set(-rT * 1.0, 0, -L * 0.75); grp.add(band);
+  grp.traverse(m => { if (m.isMesh) m.renderOrder = 1; });
+  return grp;
+}
+let LENS_TEX = null;
+
+// Drop table: holdover (rad) at each range for a weapon zeroed at its zero range
+function dropTable(w) {
+  const out = {}; let x = 0, y = 0, vx = w.v0 * Math.cos(w.zero), vy = w.v0 * Math.sin(w.zero); const dt = 1 / 400;
+  let next = 100;
+  for (let s = 0; s < 40000 && next <= 900; s++) {
+    const sp = Math.hypot(vx, vy); vx += -w.km * sp * vx * dt; vy += (-G - w.km * sp * vy) * dt; x += vx * dt; y += vy * dt;
+    if (x >= next) { out[next] = -y / x; next += 100; }
+  }
+  return out;
+}
+const SCOPE = { canvas: null, ctx: null, on: 0, range: 0, rangeT: 0, dust: null, breath: 1, holding: false, bp: 0, by: 0, drops: {} };
+function isScoped() {
+  const w = curW(), st = curS();
+  return CAM.mode === 'fp' && PL.alive && (w.scope || (w.opticZoom && st && st.att.optic && ATTACH.optic.for.includes(w.id)));
+}
+function initScope() {
+  LENS_TEX = lensTexture();
+  SCOPE.canvas = $('scopeC'); SCOPE.ctx = SCOPE.canvas.getContext('2d');
+  const r = makeRng('lensdust'); SCOPE.dust = []; for (let i = 0; i < 70; i++) SCOPE.dust.push([r() * 2 - 1, r() * 2 - 1, 0.4 + r() * 1.6, r() * 0.12]);
+  for (const w of WEAPONS) SCOPE.drops[w.id] = dropTable(w);
+}
+// breathing sway while scoped; hold sprint (Shift) to steady for a few seconds
+function updateBreath(dt) {
+  const w = curW(), scoped = isScoped() && PL.ads > 0.7;
+  const stance = PL.stance === 'prone' ? 0.25 : PL.stance === 'crouch' ? 0.6 : 1;
+  const holdKey = act('sprint') || (TOUCH.on && PL.speed < 0.3);
+  if (scoped && holdKey && SCOPE.breath > 0) { SCOPE.holding = true; SCOPE.breath = Math.max(0, SCOPE.breath - dt / 5); }
+  else { SCOPE.holding = false; SCOPE.breath = Math.min(1, SCOPE.breath + dt / 3); }
+  const amp = scoped ? (w.scope ? 0.0022 : 0.0012) * stance * (SCOPE.holding ? 0.15 : SCOPE.breath < 0.05 ? 2.2 : 1) : 0;
+  const t = GAME.time;
+  const tp = Math.sin(t * 0.83) * amp + Math.sin(t * 2.1 + 1) * amp * 0.25, ty = Math.sin(t * 0.61 + 2) * amp * 0.8;
+  SCOPE.bp += (tp - SCOPE.bp) * (1 - Math.exp(-dt * 6)); SCOPE.by += (ty - SCOPE.by) * (1 - Math.exp(-dt * 6));
+}
+const _rh = { t: 1, kind: '', obj: null, zone: '' };
+function scopeRange() {
+  const o = camera.position; _v1.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  const D = 1500, bx = o.x + _v1.x * D, by = o.y + _v1.y * D, bz = o.z + _v1.z * D;
+  let t = segTerrain(o.x, o.y, o.z, bx, by, bz); if (t < 0) t = 1;
+  const s = segStatic(o.x, o.y, o.z, bx, by, bz); if (s && s.t < t) t = s.t;
+  _rh.t = t; _rh.kind = ''; segHostiles(o.x, o.y, o.z, bx, by, bz, _rh);
+  return _rh.t >= 1 ? 0 : _rh.t * D;
+}
+function holdMil(drops, r) {
+  const keys = Object.keys(drops).map(Number).sort((a, b) => a - b); if (!keys.length || r < keys[0]) return 0;
+  for (let i = 0; i < keys.length - 1; i++) if (r <= keys[i + 1]) return lerp(drops[keys[i]], drops[keys[i + 1]], (r - keys[i]) / (keys[i + 1] - keys[i])) * 1000;
+  return drops[keys[keys.length - 1]] * 1000;
+}
+function drawScope(rdt) {
+  const c = SCOPE.canvas, scoped = isScoped();
+  const target = scoped ? smoothstep(0.82, 1, PL.ads) : 0;
+  SCOPE.on += (target - SCOPE.on) * (1 - Math.exp(-rdt * 18));
+  if (SCOPE.on < 0.02) { if (c.style.opacity !== '0') { c.style.opacity = '0'; } return; }
+  const dpr = Math.min(2, window.devicePixelRatio || 1), W = Math.round(innerWidth * dpr), H = Math.round(innerHeight * dpr);
+  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+  c.style.opacity = '1';
+  const g = SCOPE.ctx, w = curW(), marks = !!w.scope;
+  SCOPE.rangeT -= rdt; if (SCOPE.rangeT <= 0) { SCOPE.rangeT = 0.12; SCOPE.range = scopeRange(); }
+  // eyebox: the image drifts with weapon sway and movement; edges shadow when misaligned
+  const sw = PL.sway, mis = clamp(Math.hypot(sw.x, sw.y) * 40 + PL.speed * 0.025, 0, 0.35);
+  const R = Math.min(W, H) * (marks ? 0.47 : 0.43) * (0.8 + 0.2 * SCOPE.on);
+  const cx = W / 2 - sw.x * W * 0.9, cy = H / 2 + sw.y * W * 0.9;
+  g.clearRect(0, 0, W, H);
+  g.globalAlpha = SCOPE.on;
+  // tube body outside the lens
+  g.fillStyle = '#050505'; g.beginPath(); g.rect(0, 0, W, H); g.arc(cx, cy, R, 0, TAU, true); g.fill();
+  let gr = g.createRadialGradient(cx, cy, R, cx, cy, R * 1.25);
+  gr.addColorStop(0, 'rgba(40,40,42,1)'); gr.addColorStop(0.06, 'rgba(12,12,13,1)'); gr.addColorStop(0.5, 'rgba(22,22,24,1)'); gr.addColorStop(1, 'rgba(5,5,5,1)');
+  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, R * 1.25, 0, TAU); g.arc(cx, cy, R, 0, TAU, true); g.fill();
+  // inner edge vignette + eyebox shadow
+  gr = g.createRadialGradient(cx + sw.x * W * 3, cy - sw.y * W * 3, R * (0.72 - mis), cx, cy, R);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.8, `rgba(0,0,0,${0.25 + mis})`); gr.addColorStop(1, 'rgba(0,0,0,.95)');
+  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.fill();
+  // glass: faint coating tint, chromatic fringe at the edge, reflections, dust
+  g.save(); g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.clip();
+  g.fillStyle = 'rgba(110,160,150,.045)'; g.fillRect(cx - R, cy - R, R * 2, R * 2);
+  g.lineWidth = Math.max(2, R * 0.012);
+  g.strokeStyle = 'rgba(255,70,40,.22)'; g.beginPath(); g.arc(cx + 1.5 * dpr, cy, R - g.lineWidth, 0, TAU); g.stroke();
+  g.strokeStyle = 'rgba(60,120,255,.22)'; g.beginPath(); g.arc(cx - 1.5 * dpr, cy, R - g.lineWidth * 1.8, 0, TAU); g.stroke();
+  const gx = cx - R * 0.35 + sw.x * W * 4, gy = cy - R * 0.4 - sw.y * W * 4;
+  gr = g.createRadialGradient(gx, gy, 0, gx, gy, R * 0.55); gr.addColorStop(0, 'rgba(255,255,255,.07)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(cx - R, cy - R, R * 2, R * 2);
+  g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = R * 0.03; g.beginPath(); g.arc(cx, cy, R * 0.86, 3.6, 4.4); g.stroke();
+  for (const [dx, dy, s, a] of SCOPE.dust) { g.fillStyle = `rgba(200,200,190,${a})`; g.beginPath(); g.arc(cx + dx * R * 0.9, cy + dy * R * 0.9, s * dpr, 0, TAU); g.fill(); }
+  // reticle, scaled in milliradians to the real field of view
+  const ppr = (H / 2) / Math.tan(camera.fov * DEG / 2), mil = ppr * 0.001;
+  const night = SKYSTATE.night > 0.5 || WEATHER.storm > 0.5, illum = night ? 1 : 0.85;
+  const red = `rgba(255,${night ? 60 : 40},30,${illum})`, ink = 'rgba(8,8,8,.92)';
+  g.translate(cx, cy);
+  const drops = SCOPE.drops[w.id] || {};
+  // second-focal-plane reticle: pattern scaled to the lens; bullet-drop marks at their true angles
+  const u = R / 11, lw = Math.max(1.4 * dpr, R * 0.0035);
+  const lbl = (txt, x, y, col) => { g.fillStyle = 'rgba(0,0,0,.35)'; g.fillText(txt, x + 1, y + 1); g.fillStyle = col; g.fillText(txt, x, y); };
+  g.font = `600 ${Math.max(11 * dpr, R * 0.032)}px ui-monospace,Menlo,monospace`; g.textBaseline = 'middle';
+  if (marks) {
+    // mil-dot pattern: heavy posts, fine crosshair, dots each unit, half-unit hashes
+    g.fillStyle = ink;
+    const post = Math.max(4 * dpr, R * 0.018), inner = 6.5 * u;
+    g.fillRect(-R, -post / 2, R - inner, post); g.fillRect(inner, -post / 2, R - inner, post); g.fillRect(-post / 2, inner, post, R - inner);
+    g.fillRect(-post * 0.3, -R, post * 0.6, R - inner);
+    g.fillRect(-inner, -lw / 2, inner * 2, lw); g.fillRect(-lw / 2, -inner, lw, inner * 2);
+    const dr = Math.max(2 * dpr, R * 0.009);
+    for (let k = -6; k <= 6; k++) {
+      if (!k) continue;
+      g.beginPath(); g.arc(k * u, 0, dr, 0, TAU); g.fill();
+      if (k < 0) { g.beginPath(); g.arc(0, k * u, dr, 0, TAU); g.fill(); }
+      if (Math.abs(k) < 6) { g.fillRect(k * u + u / 2 - lw / 2, -u * 0.12, lw, u * 0.24); if (k < 0) g.fillRect(-u * 0.12, k * u + u / 2 - lw / 2, u * 0.24, lw); }
+    }
+    // rangefinder ladder (lower left): a 1.8 m man fits the bar at the labelled range
+    const bx = -5.6 * u, by = 4.2 * u; g.fillStyle = ink; g.fillRect(bx, by, 4 * u, lw);
+    g.textAlign = 'center';
+    [200, 300, 400, 600].forEach((r, i) => { const h = Math.min(3 * u, 1.8 / r * ppr); const x = bx + i * 1.3 * u; g.fillStyle = ink; g.fillRect(x, by - h, lw * 1.4, h); lbl(String(r / 100), x, by + u * 0.45, 'rgba(15,15,15,.9)'); });
+    // ballistic drop ticks for this rifle's zero, labelled in hundreds of metres
+    g.textAlign = 'left'; let prevY = u * 0.35;
+    for (const r of [300, 400, 500, 600, 700, 800]) {
+      const d = drops[r]; if (d == null) continue;
+      const y = Math.max(d * ppr, prevY + u * 0.55); prevY = y; if (y > 6 * u) break;
+      g.fillStyle = red; g.fillRect(-u * 0.45, y - lw * 0.7, u * 0.9, lw * 1.4);
+      lbl(String(r / 100), u * 0.6, y, red);
+    }
+    g.fillStyle = red; g.beginPath(); g.arc(0, 0, Math.max(2.2 * dpr, R * 0.008), 0, TAU); g.fill();
+  } else {
+    // combat optic: thin outer crosshair, illuminated chevron, BDC stem with ranging bars
+    g.strokeStyle = ink; g.lineWidth = lw;
+    g.beginPath(); g.moveTo(-R, 0); g.lineTo(-R * 0.45, 0); g.moveTo(R, 0); g.lineTo(R * 0.45, 0); g.moveTo(0, -R); g.lineTo(0, -R * 0.45); g.stroke();
+    g.lineWidth = Math.max(4 * dpr, R * 0.016); g.beginPath(); g.moveTo(-R, 0); g.lineTo(-R * 0.78, 0); g.moveTo(R, 0); g.lineTo(R * 0.78, 0); g.moveTo(0, -R); g.lineTo(0, -R * 0.78); g.stroke();
+    const cw = R * 0.07;
+    g.strokeStyle = red; g.lineWidth = Math.max(2.4 * dpr, R * 0.011); g.lineJoin = 'miter';
+    g.shadowColor = night ? 'rgba(255,40,20,.8)' : 'rgba(255,40,20,.3)'; g.shadowBlur = night ? 8 * dpr : 3 * dpr;
+    g.beginPath(); g.moveTo(-cw, cw * 0.95); g.lineTo(0, 0); g.lineTo(cw, cw * 0.95); g.stroke();
+    g.shadowBlur = 0;
+    const ys = []; for (const r of [300, 400, 500, 600]) { const d = drops[r]; if (d != null) ys.push([r, Math.max(d * ppr, 0)]); }
+    // keep bars readable: spread them to at least a minimum spacing below the chevron (true angles shown in the label strip)
+    let prev = cw * 1.25; const bars = ys.map(([r, y]) => { const yy = Math.max(y, prev + 14 * dpr); prev = yy; return [r, yy, y]; });
+    g.strokeStyle = 'rgba(15,15,15,.9)'; g.lineWidth = lw;
+    g.beginPath(); g.moveTo(0, cw * 1.15); g.lineTo(0, (bars.length ? bars[bars.length - 1][1] : u * 3) + 4 * dpr); g.stroke();
+    g.textAlign = 'left';
+    for (const [r, yy] of bars) {
+      const half = Math.max(0.24 / r * ppr, u * (0.5 - (r - 300) / 1500));
+      g.fillStyle = 'rgba(15,15,15,.9)'; g.fillRect(-half, yy - lw / 2, half * 2, lw);
+      lbl(String(r / 100), half + u * 0.25, yy, 'rgba(20,20,20,.9)');
+    }
+  }
+  g.restore();
+  // data strip under the reticle: magnification, laser range, breath
+  g.globalAlpha = SCOPE.on;
+  g.font = `600 ${Math.round(12 * dpr)}px ui-monospace,Menlo,monospace`; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  g.fillStyle = 'rgba(232,163,60,.95)';
+  const zoom = adsZoom(w);
+  const hold = SCOPE.range > 0 ? holdMil(drops, SCOPE.range) : null;
+  g.fillText(`${zoom}×   RNG ${SCOPE.range ? Math.round(SCOPE.range) + ' m' : '----'}${hold != null && hold > 0.3 ? '   HOLD ' + hold.toFixed(1) + ' mil' : ''}`, cx, cy + R * 0.82);
+  if (w.scope) {
+    g.fillStyle = 'rgba(236,230,220,.75)';
+    g.fillText(SCOPE.holding ? 'HOLDING BREATH' : SCOPE.breath < 1 ? 'RECOVERING' : (TOUCH.on ? 'STAND STILL TO STEADY' : 'HOLD SHIFT TO STEADY'), cx, cy + R * 0.82 + 18 * dpr);
+    g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(cx - 40 * dpr, cy + R * 0.82 + 24 * dpr, 80 * dpr, 3 * dpr);
+    g.fillStyle = 'rgba(232,163,60,.8)'; g.fillRect(cx - 40 * dpr, cy + R * 0.82 + 24 * dpr, 80 * dpr * SCOPE.breath, 3 * dpr);
+  }
+  g.globalAlpha = 1;
+}
+
+// =====================================================================
+//  TOUCH CONTROLS: floating joystick, drag-to-look, action buttons
+// =====================================================================
+const TOUCH = { on: false, joyId: null, lookId: null, fireId: null, jx: 0, jy: 0, lx: 0, ly: 0, ox: 0, oy: 0, adsOn: false, last: 0 };
+const _coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+if (_coarse && !store.get('ashfall.settings', {}).quality) S.quality = 'low';
+function enableTouch() {
+  if (TOUCH.on) return;
+  TOUCH.on = true; document.body.classList.add('touch');
+  if (!store.get('ashfall.settings', {}).quality) { S.quality = 'low'; applyQuality(); }
+}
+function cap(el, e) { try { el.setPointerCapture(e.pointerId); } catch (err) { } }
+function vdown(a) { const c = S.keys[a]; if (!IN.down.has(c)) IN.pressed.add(c); IN.down.add(c); }
+function vup(a) { IN.down.delete(S.keys[a]); }
+function initTouch() {
+  window.addEventListener('touchstart', () => { TOUCH.last = Date.now(); enableTouch(); }, { passive: true, capture: true });
+  if (_coarse) enableTouch();
+  const layer = $('touch');
+  layer.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+  layer.addEventListener('contextmenu', (e) => e.preventDefault());
+  const joy = $('tJoy'), knob = $('tKnob');
+  // floating joystick on the left half; look / drone cursor on the right
+  $('tzLeft').addEventListener('pointerdown', (e) => {
+    if (TOUCH.joyId != null) return; TOUCH.joyId = e.pointerId; cap(e.target, e);
+    TOUCH.ox = e.clientX; TOUCH.oy = e.clientY; joy.style.left = e.clientX + 'px'; joy.style.top = e.clientY + 'px'; joy.classList.add('on'); knob.style.transform = 'translate(-50%,-50%)';
+  });
+  $('tzLeft').addEventListener('pointermove', (e) => {
+    if (e.pointerId !== TOUCH.joyId) return;
+    const R = 56; let dx = e.clientX - TOUCH.ox, dy = e.clientY - TOUCH.oy; const L = Math.hypot(dx, dy);
+    if (L > R) { dx *= R / L; dy *= R / L; }
+    TOUCH.jx = dx / R; TOUCH.jy = -dy / R; knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  });
+  const endJoy = (e) => { if (e.pointerId !== TOUCH.joyId) return; TOUCH.joyId = null; TOUCH.jx = TOUCH.jy = 0; joy.classList.remove('on'); };
+  $('tzLeft').addEventListener('pointerup', endJoy); $('tzLeft').addEventListener('pointercancel', endJoy);
+  const look = (e) => {
+    const dx = e.clientX - TOUCH.lx, dy = e.clientY - TOUCH.ly; TOUCH.lx = e.clientX; TOUCH.ly = e.clientY;
+    if (CAM.mode === 'drone') return;
+    const k = 2.4 * (S.touchSens || 1);
+    IN.mdx += dx * k; IN.mdy += dy * k;
+  };
+  const droneCursor = (e) => { if (CAM.mode === 'drone') { DRONE.cursor.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight * 2 - 1)); } };
+  $('tzRight').addEventListener('pointerdown', (e) => { if (TOUCH.lookId != null) return; TOUCH.lookId = e.pointerId; cap(e.target, e); TOUCH.lx = e.clientX; TOUCH.ly = e.clientY; droneCursor(e); });
+  $('tzRight').addEventListener('pointermove', (e) => { if (e.pointerId !== TOUCH.lookId) return; look(e); droneCursor(e); });
+  const endLook = (e) => { if (e.pointerId === TOUCH.lookId) TOUCH.lookId = null; };
+  $('tzRight').addEventListener('pointerup', endLook); $('tzRight').addEventListener('pointercancel', endLook);
+  // fire button doubles as a look pad (drag while shooting)
+  const fire = $('tFire');
+  fire.addEventListener('pointerdown', (e) => { e.stopPropagation(); cap(fire, e); TOUCH.fireId = e.pointerId; TOUCH.lx = e.clientX; TOUCH.ly = e.clientY; IN.lmb = true; IN.lmbPressed = true; fire.classList.add('down'); });
+  fire.addEventListener('pointermove', (e) => { if (e.pointerId === TOUCH.fireId && TOUCH.lookId == null) look(e); });
+  const endFire = (e) => { if (e.pointerId !== TOUCH.fireId) return; TOUCH.fireId = null; IN.lmb = false; fire.classList.remove('down'); };
+  fire.addEventListener('pointerup', endFire); fire.addEventListener('pointercancel', endFire);
+  // tap buttons → virtual keys
+  const tap = (id, fn, up) => {
+    const b = $(id);
+    b.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); cap(b, e); b.classList.add('down'); fn(); AU.init(); });
+    const rel = (e) => { b.classList.remove('down'); if (up) up(); };
+    b.addEventListener('pointerup', rel); b.addEventListener('pointercancel', rel);
+  };
+  tap('tAds', () => { TOUCH.adsOn = !TOUCH.adsOn; IN.rmb = TOUCH.adsOn; $('tAds').classList.toggle('lit', TOUCH.adsOn); });
+  tap('tJump', () => vdown('jump'), () => vup('jump'));
+  tap('tCrouch', () => vdown('crouch'), () => vup('crouch'));
+  tap('tProne', () => vdown('prone'), () => vup('prone'));
+  tap('tReload', () => { if (CAM.mode === 'drone') DEF.rot += Math.PI / 4; else vdown('reload'); }, () => vup('reload'));
+  tap('tNade', () => vdown('grenade'), () => vup('grenade'));
+  tap('tUse', () => vdown('interact'), () => vup('interact'));
+  tap('tDrone', () => vdown('drone'), () => vup('drone'));
+  tap('tMap', () => $('mapov').classList.toggle('hidden'));
+  tap('tPause', () => pauseGame());
+  tap('tReady', () => vdown('ready'), () => vup('ready'));
+  tap('tPlace', () => { IN.lmbPressed = true; });
+  tap('tWheel', () => { if (WHEEL.open) closeWheel(false); else { openWheel(CAM.mode === 'drone' ? 'build' : 'weapon'); WHEEL.touch = true; } });
+  // GTA-style wheel: tap a segment
+  $('wheelC').addEventListener('pointerdown', (e) => {
+    if (!WHEEL.open) return; e.preventDefault();
+    const r = $('wheelC').getBoundingClientRect(), x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+    const d = Math.hypot(x, y) / (r.width / 2), n = WHEEL.items.length;
+    if (d < 0.38 || d > 1.05) { closeWheel(false); return; }
+    const a = Math.atan2(y, x) + Math.PI / 2; WHEEL.sel = ((Math.round(a / (TAU / n)) % n) + n) % n; closeWheel(true);
+  });
+  $('rotate').addEventListener('pointerdown', () => { TOUCH.rotDismissed = true; $('rotate').classList.add('hidden'); });
+}
+function updateTouchUI() {
+  if (!TOUCH.on) return;
+  const show = GAME.state === 'playing' && !GAME.modal;
+  $('touch').classList.toggle('hidden', !show);
+  if (!show) return;
+  const drone = CAM.mode === 'drone';
+  document.body.classList.toggle('tdrone', drone);
+  $('tReady').classList.toggle('hidden', RUN.phase !== 'intermission');
+  $('tUse').classList.toggle('hidden', !INTERACT.label || drone);
+  $('tUse').textContent = INTERACT.label ? (INTERACT.label.startsWith('Hold') ? 'REPAIR' : INTERACT.label.includes('Reload') ? 'RELOAD GUN' : 'OPEN') : 'USE';
+  $('tReload').textContent = drone ? 'ROTATE' : 'RELOAD';
+  $('tWheel').textContent = drone ? DEFTYPES[DEF.sel].name.toUpperCase() : curW().name;
+  $('tDrone').textContent = drone ? 'EXIT DRONE' : 'DRONE';
+  $('rotate').classList.toggle('hidden', !(innerHeight > innerWidth) || TOUCH.rotDismissed);
 }
 
 // =====================================================================
@@ -4654,7 +5043,7 @@ function updateHUD(rdt) {
   hudT -= rdt; if (hudT > 0) return; hudT = 0.05;
   const w = curW(), st = curS();
   $('hWave').textContent = 'WAVE ' + Math.max(1, RUN.wave + (RUN.phase === 'intermission' ? 1 : 0));
-  if (RUN.phase === 'intermission') $('hPhase').innerHTML = `INTERMISSION · ${Math.ceil(Math.max(0, RUN.phaseT))}s · <span style="color:var(--amber)">ENTER</span> to start`;
+  if (RUN.phase === 'intermission') $('hPhase').innerHTML = `INTERMISSION · ${Math.ceil(Math.max(0, RUN.phaseT))}s${TOUCH.on ? '' : ' · <span style="color:var(--amber)">ENTER</span> to start'}`;
   else { const left = WAVE.queue.reduce((a, s) => a + s.members.length + (s.vehicle ? 1 : 0), 0) + ENEMIES.filter(e => e.active && !e.dead).length + VEHICLES.filter(v => v.active && !v.dead).length; $('hPhase').textContent = `HOSTILES ${left} · ${DIRECTOR.state.toUpperCase()}`; }
   $('hSalv').textContent = `SALVAGE ${RUN.salvage}`;
   $('hpFill').style.width = (PL.hp / PL.maxHp * 100) + '%'; $('hpTxt').textContent = Math.ceil(PL.hp);
@@ -4678,17 +5067,14 @@ function updateHUD(rdt) {
     xs[1].style.cssText = `width:2px;height:8px;left:-1px;top:${-px - 8}px`; xs[2].style.cssText = `width:2px;height:8px;left:-1px;top:${px}px`;
     xs[3].style.cssText = `width:8px;height:2px;top:-1px;left:${-px - 8}px`; xs[4].style.cssText = `width:8px;height:2px;top:-1px;left:${px}px`;
   }
-  const scoped = w.scope && PL.ads > 0.85 && CAM.mode === 'fp';
-  $('scope').style.opacity = scoped ? 1 : 0; $('scopeMarks').style.opacity = scoped ? 1 : 0;
   // interaction prompt
-  $('prompt').innerHTML = !IN.locked && !GAME.modal ? '<b>CLICK</b> to capture the mouse' : INTERACT.label ? `<b>${keyName(S.keys.interact)}</b>${INTERACT.label}` : '';
+  $('prompt').innerHTML = !IN.locked && !GAME.modal && !TOUCH.on ? '<b>CLICK</b> to capture the mouse' : INTERACT.label ? `<b>${keyName(S.keys.interact)}</b>${INTERACT.label}` : '';
   COMPASS.draw(); drawMinimap();
   if (!$('mapov').classList.contains('hidden')) drawMap();
   if (S.showFps) $('fpsbox').textContent = `${GAME.fps.toFixed(0)} fps · ${renderer.info.render.calls} calls · ${PJ.count} rounds`;
   else $('fpsbox').textContent = '';
 }
 function keyName(code) { return (code || '').replace('Key', '').replace('Digit', '').replace('Left', '').replace('Right', ''); }
-function buildScopeMarks() { let h = ''; for (let i = 1; i <= 6; i++) h += `<i style="top:${i * 2.6}vh;width:${i % 2 ? 8 : 14}px;left:${i % 2 ? -4 : -7}px"></i>`; $('scopeMarks').innerHTML = h; }
 
 // ---------------- interaction (F): repair, crates ----------------
 const INTERACT = { label: '', target: null };
@@ -4719,13 +5105,13 @@ function updateInteract(dt) {
 
 // ---------------- tutorial (contextual, first launch only) ----------------
 const TUT_STEPS = [
-  { text: () => `Move with <b>WASD</b>, look with the mouse. The control house behind you keeps the turbines running. Hold the valley.`, done: 'moved' },
-  { text: () => `Press <b>${keyName(S.keys.drone)}</b> to launch the recon drone and fortify the approach.`, done: 'drone' },
-  { text: () => `Drone view: hold <b>${keyName(S.keys.wheel)}</b> (or scroll) to pick a defense, <b>click</b> to place, <b>Q/E</b> to rotate, <b>WASD</b> to fly. Time runs at quarter speed up here.`, done: 'placed', timeout: 35 },
-  { text: () => `<b>${keyName(S.keys.drone)}</b> returns to first person. Press <b>ENTER</b> when you're ready for the first wave.`, done: 'wave' },
-  { text: () => `Left click fires, right click aims. <b>B</b> toggles semi/auto. Short bursts stay accurate: heat builds spread.`, done: 'fire', timeout: 14 },
-  { text: () => `<b>R</b> reloads. Hold <b>${keyName(S.keys.wheel)}</b> for the weapon wheel: swapping to the pistol is faster than reloading.`, done: 'reload', timeout: 18 },
-  { text: () => `When a defense is damaged, stand next to it and hold <b>F</b> to repair it.`, done: 'repaired', timeout: 16, wait: 'defdamaged' }
+  { text: () => TOUCH.on ? `Drag the <b>left side</b> to move, drag the <b>right side</b> to look. Push the stick all the way forward to sprint. The control house behind you keeps the turbines running.` : `Move with <b>WASD</b>, look with the mouse. The control house behind you keeps the turbines running. Hold the valley.`, done: 'moved' },
+  { text: () => TOUCH.on ? `Tap <b>DRONE</b> to launch the recon drone and fortify the approach.` : `Press <b>${keyName(S.keys.drone)}</b> to launch the recon drone and fortify the approach.`, done: 'drone' },
+  { text: () => TOUCH.on ? `Drone view: touch the ground to aim, tap the defense name to pick one, <b>PLACE</b> to build, <b>ROTATE</b> to turn it. The left stick flies the drone.` : `Drone view: hold <b>${keyName(S.keys.wheel)}</b> (or scroll) to pick a defense, <b>click</b> to place, <b>Q/E</b> to rotate, <b>WASD</b> to fly. Time runs at quarter speed up here.`, done: 'placed', timeout: 35 },
+  { text: () => TOUCH.on ? `Tap <b>EXIT DRONE</b>, then <b>START WAVE</b> when you're ready.` : `<b>${keyName(S.keys.drone)}</b> returns to first person. Press <b>ENTER</b> when you're ready for the first wave.`, done: 'wave' },
+  { text: () => TOUCH.on ? `Hold <b>FIRE</b> to shoot; drag on it to aim while firing. <b>AIM</b> toggles the scope. Short bursts stay accurate.` : `Left click fires, right click aims. <b>B</b> toggles semi/auto. Short bursts stay accurate: heat builds spread.`, done: 'fire', timeout: 14 },
+  { text: () => TOUCH.on ? `<b>RELOAD</b> reloads. Tap the weapon name on the right for the weapon wheel.` : `<b>R</b> reloads. Hold <b>${keyName(S.keys.wheel)}</b> for the weapon wheel: swapping to the pistol is faster than reloading.`, done: 'reload', timeout: 18 },
+  { text: () => TOUCH.on ? `When a defense is damaged, stand next to it and hold <b>REPAIR</b>.` : `When a defense is damaged, stand next to it and hold <b>F</b> to repair it.`, done: 'repaired', timeout: 16, wait: 'defdamaged' }
 ];
 function tutorialEvent(ev) {
   const T = GAME.tut; if (!T) return;
@@ -4763,7 +5149,7 @@ function updateCamera(rdt) {
     const w = curW();
     const bobY = Math.sin(PL.bob * 2) * 0.04 * PL.bobAmt * (PL.sprint ? 1.6 : 1) * (1 - PL.ads * 0.85);
     const bobX = Math.cos(PL.bob) * 0.03 * PL.bobAmt * (1 - PL.ads * 0.85);
-    _e1.set(PL.pitch + PL.rec.p + shP, PL.yaw + PL.rec.y + shY, -PL.lean * 0.2 + shR + bobX * 0.3, 'YXZ'); _cq.setFromEuler(_e1);
+    _e1.set(PL.pitch + PL.rec.p + shP + SCOPE.bp, PL.yaw + PL.rec.y + shY + SCOPE.by, -PL.lean * 0.2 + shR + bobX * 0.3, 'YXZ'); _cq.setFromEuler(_e1);
     _cp.set(PL.pos.x, PL.pos.y + PL.eye + bobY, PL.pos.z);
     _cp.x += Math.cos(PL.yaw) * PL.lean * 0.45 + Math.cos(PL.yaw) * bobX + shX; _cp.z += -Math.sin(PL.yaw) * PL.lean * 0.45 - Math.sin(PL.yaw) * bobX + shZ;
     if (CAM.mode === 'tp') {
@@ -4841,7 +5227,7 @@ function updateCamera(rdt) {
 }
 // viewmodel pose: hip / ADS blend, sway spring, bob, recoil kick, sprint & reload poses
 function updateViewmodel(rdt) {
-  const show = CAM.mode === 'fp' && PL.alive && !(curW().scope && PL.ads > 0.9);
+  const show = CAM.mode === 'fp' && PL.alive && !(isScoped() && SCOPE.on > 0.6);
   VM.root.visible = show;
   if (!show) return;
   const m = VM.models[PL.cur]; if (!m) return;
@@ -4895,8 +5281,9 @@ function closeWheel(apply) {
 }
 function updateWheel() {
   const can = GAME.state === 'playing' && !GAME.modal && PL.alive && CAM.mode !== 'bulletcam' && CAM.mode !== 'replay';
+  if (WHEEL.open && WHEEL.touch) { if (!can) closeWheel(false); else drawWheel(); return; }
   const held = can && act('wheel');
-  if (held && !WHEEL.open) openWheel(CAM.mode === 'drone' ? 'build' : 'weapon');
+  if (held && !WHEEL.open) { openWheel(CAM.mode === 'drone' ? 'build' : 'weapon'); WHEEL.touch = false; }
   if (!WHEEL.open) return;
   if (!held) { closeWheel(true); return; }
   WHEEL.vx = clamp(WHEEL.vx + IN.mdx, -140, 140); WHEEL.vy = clamp(WHEEL.vy + IN.mdy, -140, 140);
@@ -5098,6 +5485,8 @@ function renderKeys() {
 }
 function finishRebind(code) { if (code !== 'Escape') S.keys[IN.rebinding] = code; IN.rebinding = null; saveSettings(); renderKeys(); }
 function wireUI() {
+  const goFull = () => { if (!TOUCH.on) return; try { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => { })).catch(() => { }); } catch (e) { } };
+  $('bNew').addEventListener('click', goFull); $('bDaily').addEventListener('click', goFull); $('bAgain').addEventListener('click', goFull);
   $('bNew').onclick = () => { const s = $('seedIn').value.trim().toUpperCase() || randomSeed(); startRun(s, false); };
   $('bDaily').onclick = () => startRun(dailySeed(), true);
   $('bSettings').onclick = () => openSettings('title'); $('bPSettings').onclick = () => openSettings('pause');
@@ -5180,6 +5569,7 @@ function simulate(rdt, ts, playing) {
     }
     ENEMY_HASH.build(ENEMIES);
     updatePlayer(dt);
+    updateBreath(dt);
     if (GAME.state === 'playing') {
       if (RUN.phase === 'intermission') { RUN.phaseT -= dt; if (RUN.phaseT <= 0 && !GAME.modal && !(GAME.tut && GAME.tut.step < 3)) startWave(); }
       else { updateWave(dt); DIRECTOR.update(dt); updateSquads(dt); }
@@ -5196,6 +5586,8 @@ function simulate(rdt, ts, playing) {
   updateRecoveryAnim(rdt);
   updateCamera(rdt);
   updateViewmodel(rdt);
+  drawScope(rdt);
+  updateTouchUI();
   updateAtmosphere(rdt * (playing ? Math.max(ts, 0.25) : 1), GAME.state === 'title');
   updateLightPools();
   updateBoomLights(rdt);
@@ -5216,7 +5608,7 @@ async function boot() {
   onResize(); window.addEventListener('resize', onResize);
   applyQuality();
   initParticles(); initDecals(); initDebris(); initRings(); initWeatherParticles(); initTracers(); initEnemyRender(); initDefenses();
-  buildViewmodels(); buildPlayerBody(); buildCrosshair(); buildScopeMarks(); wireUI();
+  initScope(); buildViewmodels(); buildPlayerBody(); buildCrosshair(); wireUI(); initTouch();
   POST.uniforms.uCB.value = S.colorblind;
   $('seedIn').value = '';
   requestAnimationFrame(frame);
