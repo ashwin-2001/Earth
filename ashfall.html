@@ -121,6 +121,8 @@ input[type=range]{padding:0;accent-color:var(--amber)}
 .keys button{padding:3px 10px;font:12px var(--mono);text-transform:none;min-width:90px}
 .tabs{display:flex;gap:6px;margin-bottom:12px}
 .tabs button.on{border-color:var(--amber);color:#fff}
+#wheel{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:radial-gradient(circle,rgba(10,9,8,.15),rgba(10,9,8,.55))}
+#wheel canvas{width:min(78vmin,600px);height:min(78vmin,600px)}
 #mapov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(8,7,6,.7);pointer-events:none}
 #mapov canvas{width:min(84vh,84vw);height:min(84vh,84vw);border:1px solid var(--line)}
 #notes{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,90vw);background:#d8cfbd;color:#2a241c;padding:22px 26px;font:15px/1.5 Georgia,serif;box-shadow:0 10px 40px rgba(0,0,0,.7);pointer-events:none;transform-origin:center}
@@ -165,6 +167,7 @@ input[type=range]{padding:0;accent-color:var(--amber)}
   <div class="tl"><span class="rec">● REC</span> RQ-7 RECON<br>ALT <span id="dAlt">80</span> m<br>BATT <span id="dBat">100</span>%<br>T×0.25</div>
   <div id="dronecur"></div><div id="buildinfo"></div><div id="buildbar"></div>
 </div>
+<div id="wheel" class="hidden"><canvas id="wheelC" width="1200" height="1200"></canvas></div>
 <div id="mapov" class="hidden"><canvas id="mapC" width="900" height="900"></canvas></div>
 <div id="notes" class="hidden"></div>
 
@@ -605,19 +608,20 @@ const store = {
 const DEFAULT_KEYS = {
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft', jump: 'Space', crouch: 'KeyC', prone: 'KeyZ',
   slide: 'ControlLeft', leanL: 'KeyQ', leanR: 'KeyE', reload: 'KeyR', firemode: 'KeyB', grenade: 'KeyG', interact: 'KeyF',
-  drone: 'Tab', camera: 'KeyV', map: 'KeyM', ready: 'Enter',
+  drone: 'KeyT', wheel: 'Tab', camera: 'KeyV', map: 'KeyM', ready: 'Enter',
   w1: 'Digit1', w2: 'Digit2', w3: 'Digit3', w4: 'Digit4', w5: 'Digit5', w6: 'Digit6'
 };
 const KEY_LABELS = {
   forward: 'Move forward', back: 'Move back', left: 'Strafe left', right: 'Strafe right', sprint: 'Sprint', jump: 'Jump', crouch: 'Crouch',
   prone: 'Prone', slide: 'Slide (while sprinting)', leanL: 'Lean left', leanR: 'Lean right', reload: 'Reload', firemode: 'Fire mode',
-  grenade: 'Throw grenade', interact: 'Interact / repair (hold)', drone: 'Drone view', camera: 'Cycle camera', map: 'Map', ready: 'Start next wave',
+  grenade: 'Throw grenade', interact: 'Interact / repair (hold)', drone: 'Drone view', wheel: 'Weapon / build wheel (hold)', camera: 'Cycle camera', map: 'Map', ready: 'Start next wave',
   w1: 'Service rifle', w2: 'Shotgun', w3: 'Marksman rifle', w4: 'Machine gun', w5: 'Grenade launcher', w6: 'Pistol'
 };
 const S = Object.assign({
   quality: 'medium', fov: 75, showFps: false, volM: 0.8, volS: 0.9, volMu: 0.5, sens: 1, adsSens: 0.75, invertY: false,
   colorblind: 0, shake: true, dmgNumbers: false, keys: {}
 }, store.get('ashfall.settings', {}));
+if ((S.keysVersion || 1) < 2) { if (S.keys && S.keys.drone === 'Tab') S.keys.drone = 'KeyT'; S.keysVersion = 2; }
 S.keys = Object.assign({}, DEFAULT_KEYS, S.keys || {});
 function saveSettings() { store.set('ashfall.settings', S); }
 const PROFILE = Object.assign({ xp: 0, unlocked: {}, tutorialDone: false, bestWave: 0, runs: 0, loadout: {}, notesFound: 0 }, store.get('ashfall.profile', {}));
@@ -625,16 +629,13 @@ function saveProfile() { store.set('ashfall.profile', PROFILE); }
 
 // Permanent unlocks (XP earned across runs)
 const UNLOCKS = [
-  { id: 'opt_reddot', xp: 300, name: 'Red-dot optic', kind: 'Attachment', desc: 'Rifle / LMG / pistol. Tighter ADS spread.' },
+  { id: 'opt_reddot', xp: 0, name: 'Red-dot optic', kind: 'Attachment', desc: 'Rifle / LMG / pistol. Tighter ADS spread.' },
   { id: 'def_flood', xp: 0, name: 'Floodlight tower', kind: 'Defense', desc: 'Reveals enemies at night; glare ruins their aim.' },
-  { id: 'wpn_marksman', xp: 600, name: 'Marksman rifle', kind: 'Weapon', desc: '7.62 mm semi-auto with 4× scope.' },
   { id: 'att_supp', xp: 900, name: 'Suppressor', kind: 'Attachment', desc: 'Quieter, harder to locate. −5% velocity.' },
   { id: 'def_mortar', xp: 1200, name: 'Mortar emplacement', kind: 'Defense', desc: '80–600 m indirect fire, high arc.' },
   { id: 'att_mag', xp: 1500, name: 'Extended magazines', kind: 'Attachment', desc: '+50% magazine capacity.' },
-  { id: 'wpn_lmg', xp: 2000, name: 'Light machine gun', kind: 'Weapon', desc: '100-round belt. Bipod bonus when low.' },
   { id: 'def_jammer', xp: 2400, name: 'Anti-drone jammer', kind: 'Defense', desc: 'Drones in range lose link and fall.' },
   { id: 'att_grip', xp: 2800, name: 'Foregrip', kind: 'Attachment', desc: '−25% recoil.' },
-  { id: 'wpn_gl', xp: 3500, name: 'Grenade launcher', kind: 'Weapon', desc: '40 mm break-action, arcing fire.' },
   { id: 'def_mine', xp: 4200, name: 'Anti-vehicle mines', kind: 'Defense', desc: 'Placed on roads. Wrecks trucks and armor.' },
   { id: 'ammo_ap', xp: 5000, name: 'AP ammunition', kind: 'Ammo', desc: 'Penetrates cover and light armor.' },
   { id: 'ammo_hp', xp: 6000, name: 'Expanding ammunition', kind: 'Ammo', desc: '+20% flesh damage, poor penetration.' },
@@ -651,7 +652,7 @@ function actP(a) { return IN.pressed.has(S.keys[a]); }
 window.addEventListener('keydown', (e) => {
   if (IN.rebinding) { e.preventDefault(); finishRebind(e.code); return; }
   if (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.type !== 'range' && document.activeElement.type !== 'checkbox') return;
-  if (['Tab', 'Space', 'ArrowUp', 'ArrowDown', 'KeyW', 'ControlLeft'].includes(e.code) || e.ctrlKey) e.preventDefault();
+  if (['Tab', 'Space', 'Digit1', 'ArrowUp', 'ArrowDown', 'KeyW', 'ControlLeft'].includes(e.code) || e.ctrlKey) e.preventDefault();
   if (!IN.down.has(e.code)) IN.pressed.add(e.code);
   IN.down.add(e.code);
   if (e.code === 'Escape') onEscape();
@@ -2189,7 +2190,7 @@ function initWeatherParticles() {
 function pattern(n, fn) { const a = []; for (let i = 0; i < n; i++) a.push(fn(i)); return a; }
 const WEAPONS = [
   { id: 'rifle', key: 'w1', name: 'SERVICE RIFLE', cal: '5.56×45 mm', v0: 910, mass: 0.004, diam: 0.0057, cd: 0.3, dmg: 34, near: 30, far: 320, minPct: 0.6,
-    rpm: 750, modes: ['AUTO', 'SEMI'], mag: 30, reserve: 210, reload: 2.4, tacReload: 1.95, draw: 0.5, zoom: 1.35, adsTime: 0.2, sound: 'rifle', pellets: 1,
+    rpm: 750, modes: ['AUTO', 'SEMI'], mag: 30, reserve: 300, reload: 2.4, tacReload: 1.95, draw: 0.5, zoom: 1.35, opticZoom: 2.5, adsTime: 0.2, sound: 'rifle', pellets: 1,
     spread: { base: 0.0016, ads: 0.0003, move: 0.0045, heat: 0.011, air: 0.03 }, heatPer: 0.12, heatTau: 0.32, suppress: 1,
     recoil: pattern(30, i => [0.0105 - Math.min(i, 12) * 0.00025, 0.0032 * (i < 7 ? 0.7 : Math.sin(i * 0.5) * 1.3)]), recoilNoise: 0.0011, kickBack: 0.035 },
   { id: 'shotgun', key: 'w2', name: 'PUMP SHOTGUN', cal: '12 ga 00 buck', v0: 400, mass: 0.0035, diam: 0.0084, cd: 0.47, dmg: 17, near: 8, far: 32, minPct: 0.15,
@@ -2198,15 +2199,15 @@ const WEAPONS = [
     recoil: pattern(6, i => [0.055, 0.004]), recoilNoise: 0.006, kickBack: 0.11, pump: 0.62 },
   { id: 'marksman', key: 'w3', name: 'MARKSMAN RIFLE', cal: '7.62×51 mm', v0: 830, mass: 0.0095, diam: 0.00782, cd: 0.29, dmg: 72, near: 60, far: 650, minPct: 0.75,
     rpm: 280, modes: ['SEMI'], mag: 20, reserve: 100, reload: 2.9, tacReload: 2.4, draw: 0.6, zoom: 4, scope: true, adsTime: 0.32, sound: 'marksman', pellets: 1,
-    spread: { base: 0.004, ads: 0.00012, move: 0.006, heat: 0.004, air: 0.04 }, heatPer: 0.25, heatTau: 0.4, suppress: 1.4, unlock: 'wpn_marksman',
+    spread: { base: 0.004, ads: 0.00012, move: 0.006, heat: 0.004, air: 0.04 }, heatPer: 0.25, heatTau: 0.4, suppress: 1.4,
     recoil: pattern(20, i => [0.032, 0.006 * Math.sin(i * 1.7)]), recoilNoise: 0.002, kickBack: 0.06 },
   { id: 'lmg', key: 'w4', name: 'LIGHT MACHINE GUN', cal: '5.56×45 mm belt', v0: 915, mass: 0.004, diam: 0.0057, cd: 0.3, dmg: 32, near: 35, far: 380, minPct: 0.55,
     rpm: 850, modes: ['AUTO'], mag: 100, reserve: 300, reload: 5.4, draw: 0.75, zoom: 1.25, adsTime: 0.3, sound: 'lmg', pellets: 1, bipod: true,
-    spread: { base: 0.0035, ads: 0.0012, move: 0.007, heat: 0.009, air: 0.04 }, heatPer: 0.08, heatTau: 0.45, suppress: 2.4, unlock: 'wpn_lmg', barrel: true,
+    spread: { base: 0.0035, ads: 0.0012, move: 0.007, heat: 0.009, air: 0.04 }, heatPer: 0.08, heatTau: 0.45, suppress: 2.4, barrel: true,
     recoil: pattern(100, i => [0.0115, 0.0045 * Math.sin(i * 0.33) + 0.0012]), recoilNoise: 0.002, kickBack: 0.04 },
   { id: 'gl', key: 'w5', name: 'GRENADE LAUNCHER', cal: '40×46 mm HE', v0: 76, mass: 0.23, diam: 0.04, cd: 0.35, dmg: 0, near: 0, far: 1, minPct: 1,
     rpm: 60, modes: ['SINGLE'], mag: 1, reserve: 14, reload: 2.4, draw: 0.6, zoom: 1.2, adsTime: 0.25, sound: 'gl', pellets: 1, shell: { D0: 170, R: 7.5, size: 1.1 },
-    spread: { base: 0.002, ads: 0.001, move: 0.004, heat: 0, air: 0.02 }, heatPer: 0, heatTau: 1, unlock: 'wpn_gl',
+    spread: { base: 0.002, ads: 0.001, move: 0.004, heat: 0, air: 0.02 }, heatPer: 0, heatTau: 1,
     recoil: pattern(1, i => [0.06, 0.004]), recoilNoise: 0.004, kickBack: 0.09 },
   { id: 'pistol', key: 'w6', name: 'SIDEARM', cal: '9×19 mm', v0: 370, mass: 0.008, diam: 0.009, cd: 0.25, dmg: 26, near: 12, far: 60, minPct: 0.5,
     rpm: 420, modes: ['SEMI'], mag: 15, reserve: 75, reload: 1.55, tacReload: 1.3, draw: 0.22, zoom: 1.2, adsTime: 0.14, sound: 'pistol', pellets: 1,
@@ -2215,7 +2216,7 @@ const WEAPONS = [
 ];
 WEAPONS.forEach((w, i) => { w.index = i; w.A = Math.PI * (w.diam / 2) ** 2; w.k = 0.5 * RHO * w.cd * w.A; w.km = w.k / w.mass; });
 const ATTACH = {
-  optic: { unlock: 'opt_reddot', for: ['rifle', 'lmg', 'pistol'], name: 'Red-dot' },
+  optic: { unlock: 'opt_reddot', for: ['rifle', 'lmg', 'pistol'], name: 'Scope' },
   supp: { unlock: 'att_supp', for: ['rifle', 'marksman', 'pistol', 'lmg'], name: 'Suppressor' },
   mag: { unlock: 'att_mag', for: ['rifle', 'marksman', 'pistol', 'lmg', 'shotgun'], name: 'Ext. mag' },
   grip: { unlock: 'att_grip', for: ['rifle', 'lmg', 'shotgun', 'marksman'], name: 'Foregrip' },
@@ -2329,7 +2330,7 @@ function lineOfSight(ax, ay, az, bx, by, bz, toCore) {
 // ---------------- player ----------------
 const PL = {
   pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, pitch: 0, eye: 1.65, stance: 'stand', onGround: true, sprint: false, slideT: 0,
-  lean: 0, hp: 100, maxHp: 100, regenT: 0, bob: 0, bobAmt: 0, lastStep: 0, fovKick: 0, sprintF: 0, ads: 0, alive: true,
+  lean: 0, hp: 250, maxHp: 250, regenT: 0, bob: 0, bobAmt: 0, lastStep: 0, fovKick: 0, sprintF: 0, ads: 0, alive: true,
   rec: { p: 0, y: 0, vp: 0, vy: 0 }, sway: { x: 0, y: 0, vx: 0, vy: 0, rx: 0, ry: 0 }, heat: 0, cur: 0, prev: 5, switchT: 0, switchTo: -1, drawT: 0,
   reloadT: 0, reloading: false, fireT: 0, burst: 0, pumpT: 0, grenades: 3, triggerHeld: false, speed: 0, inCover: 0, airT: 0,
   W: [], interactT: 0, indoor: false, lastHitBy: null, killer: null, barrel: 0, overheat: false, shotsInBurst: 0
@@ -2337,7 +2338,7 @@ const PL = {
 function resetPlayerWeapons(run) {
   PL.W = WEAPONS.map(w => {
     const lo = PROFILE.loadout[w.id] || {};
-    const att = { optic: !!lo.optic && unlocked('opt_reddot'), supp: !!lo.supp && unlocked('att_supp'), mag: !!lo.mag && unlocked('att_mag'), grip: !!lo.grip && unlocked('att_grip'), ammo: lo.ammo || 'FMJ' };
+    const att = { optic: (lo.optic == null ? w.id === 'rifle' : !!lo.optic) && unlocked('opt_reddot'), supp: !!lo.supp && unlocked('att_supp'), mag: !!lo.mag && unlocked('att_mag'), grip: !!lo.grip && unlocked('att_grip'), ammo: lo.ammo || 'FMJ' };
     if (att.ammo === 'AP' && !unlocked('ammo_ap')) att.ammo = 'FMJ'; if (att.ammo === 'HP' && !unlocked('ammo_hp')) att.ammo = 'FMJ';
     const magSize = Math.round(w.mag * (att.mag && ATTACH.mag.for.includes(w.id) && w.mag > 1 ? 1.5 : 1));
     return { owned: !w.unlock || unlocked(w.unlock), mag: magSize, magSize, reserve: w.reserve, mode: 0, att, shot: 0 };
@@ -2417,7 +2418,8 @@ function buildViewmodels() {
     B(g, black, 0, 0.012, -0.73, 0.022, 0.03, 0.04); B(g, poly, 0, -0.08, 0.0, 0.035, 0.1, 0.05, -0.3);
     B(g, black, 0, -0.085, -0.15, 0.035, 0.13, 0.07, 0.15); B(g, poly, 0, -0.01, 0.2, 0.05, 0.08, 0.22);
     B(g, black, 0, 0.065, -0.03, 0.012, 0.03, 0.012); B(g, black, 0, 0.065, -0.48, 0.012, 0.03, 0.012);
-    arms(g, 0, -0.42); models.rifle = { g, muzzle: new THREE.Vector3(0, 0.01, -0.76), sightY: 0.07, hip: new THREE.Vector3(0.15, -0.16, -0.36), mag: g.children[6] };
+    const irons = [g.children[8], g.children[9]];
+    arms(g, 0, -0.42); models.rifle = { g, muzzle: new THREE.Vector3(0, 0.01, -0.76), sightY: 0.07, hip: new THREE.Vector3(0.15, -0.16, -0.36), irons };
   }
   { // shotgun
     const g = new THREE.Group();
@@ -2458,8 +2460,16 @@ function buildViewmodels() {
   // attachments: red-dot & suppressor & grip (toggled per weapon)
   for (const id in models) {
     const m = models[id];
-    m.optic = new THREE.Group(); B(m.optic, black, 0, 0.075, -0.1, 0.035, 0.035, 0.06); const lens = B(m.optic, new THREE.MeshBasicMaterial({ color: 0x223322, transparent: true, opacity: 0.35 }), 0, 0.078, -0.1, 0.028, 0.026, 0.002);
-    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0012, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); dot.position.set(0, 0.078, -0.13); m.optic.add(dot);
+    m.optic = new THREE.Group();
+    if (id === 'rifle') {
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.13, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0x232426, roughness: 0.5, metalness: 0.5, side: THREE.DoubleSide }));
+      tube.rotation.x = Math.PI / 2; tube.position.set(0, 0.078, -0.11); m.optic.add(tube);
+      B(m.optic, black, 0, 0.05, -0.11, 0.02, 0.03, 0.05);
+      const ret = new THREE.MeshBasicMaterial({ color: 0xff3a20 });
+      B(m.optic, ret, 0, 0.0735, -0.17, 0.0009, 0.007, 0.0005); B(m.optic, ret, -0.0045, 0.078, -0.17, 0.006, 0.0009, 0.0005); B(m.optic, ret, 0.0045, 0.078, -0.17, 0.006, 0.0009, 0.0005);
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0011, 6, 4), ret); dot.position.set(0, 0.078, -0.169); m.optic.add(dot);
+    } else B(m.optic, black, 0, 0.075, -0.1, 0.035, 0.035, 0.06); const lens = B(m.optic, new THREE.MeshBasicMaterial({ color: 0x223322, transparent: true, opacity: 0.35 }), 0, 0.078, -0.1, 0.028, 0.026, 0.002);
+    if (id !== 'rifle') { const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0012, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); dot.position.set(0, 0.078, -0.13); m.optic.add(dot); } else lens.visible = false;
     m.optic.visible = false; m.g.add(m.optic);
     m.supp = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.16, 10), black); m.supp.rotation.x = Math.PI / 2; m.supp.position.copy(m.muzzle).add(new THREE.Vector3(0, 0, -0.07)); m.supp.visible = false; m.g.add(m.supp);
     m.grip = B(m.g, poly, 0, -0.06, m.muzzle.z * 0.55, 0.03, 0.08, 0.035); m.grip.visible = false;
@@ -2480,6 +2490,7 @@ function showViewmodel(i) {
   VM.models.forEach((m, k) => m.g.visible = k === i);
   const m = VM.models[i], st = PL.W[i], w = WEAPONS[i];
   m.optic.visible = !!(st.att.optic && ATTACH.optic.for.includes(w.id));
+  if (m.irons) m.irons.forEach(o => o.visible = !m.optic.visible);
   m.supp.visible = !!(st.att.supp && ATTACH.supp.for.includes(w.id));
   m.grip.visible = !!(st.att.grip && ATTACH.grip.for.includes(w.id));
   VM.cur = i;
@@ -2519,7 +2530,7 @@ function updatePlayer(dt) {
   const w = curW(), st = curS();
   const ctrl = PL.alive && CAM.mode !== 'drone' && !GAME.modal && GAME.state === 'playing' && !GAME.freeze;
   if (ctrl) {
-    const zoom = lerp(1, w.zoom, PL.ads);
+    const zoom = lerp(1, adsZoom(w), PL.ads);
     const sens = 0.0022 * S.sens * (PL.ads > 0.3 ? S.adsSens / Math.pow(zoom, 0.85) : 1);
     PL.yaw -= IN.mdx * sens; PL.pitch -= IN.mdy * sens * (S.invertY ? -1 : 1);
     PL.pitch = clamp(PL.pitch, -1.45, 1.45);
@@ -2544,7 +2555,8 @@ function updatePlayer(dt) {
   if (ctrl) { if (act('forward')) mz += 1; if (act('back')) mz -= 1; if (act('right')) mx += 1; if (act('left')) mx -= 1; }
   const ml = Math.hypot(mx, mz); if (ml > 0) { mx /= ml; mz /= ml; }
   PL.sprint = ctrl && act('sprint') && mz > 0.3 && PL.stance === 'stand' && PL.ads < 0.3 && !PL.overheatLock;
-  let speed = PL.stance === 'prone' ? 1.1 : PL.stance === 'crouch' ? 2.3 : PL.sprint ? 6.8 : 4.3;
+  const gunning = ctrl && IN.lmb && PL.sprint; // run-and-gun: keep running, bring the gun up
+  let speed = PL.stance === 'prone' ? 1.1 : PL.stance === 'crouch' ? 2.3 : PL.sprint ? (gunning ? 6.0 : 6.8) : 4.3;
   speed *= 1 - 0.38 * PL.ads;
   if (PL.reloading && PL.sprint) speed *= 0.9;
   const fx = -Math.sin(PL.yaw), fz = -Math.cos(PL.yaw), rx = Math.cos(PL.yaw), rz = -Math.sin(PL.yaw);
@@ -2570,7 +2582,7 @@ function updatePlayer(dt) {
   PL.speed = Math.hypot(PL.vel.x, PL.vel.z);
   const eyeT = PL.slideT > 0 ? STANCE_EYE.slide : STANCE_EYE[PL.stance];
   PL.eye += (eyeT - PL.eye) * (1 - Math.exp(-dt * 10));
-  PL.sprintF += ((PL.sprint && PL.speed > 4 ? 1 : 0) - PL.sprintF) * (1 - Math.exp(-dt * 8));
+  PL.sprintF += ((PL.sprint && !gunning && PL.speed > 4 ? 1 : 0) - PL.sprintF) * (1 - Math.exp(-dt * 8));
   // lean
   let lt = 0; if (ctrl && PL.stance !== 'prone' && !PL.sprint) { if (act('leanL')) lt -= 1; if (act('leanR')) lt += 1; }
   PL.lean += (lt - PL.lean) * (1 - Math.exp(-dt * 9));
@@ -2583,7 +2595,7 @@ function updatePlayer(dt) {
   } else PL.bobAmt *= Math.exp(-dt * 6);
   // health regen
   PL.regenT -= dt;
-  if (PL.regenT <= 0 && PL.hp < PL.maxHp && PL.alive) PL.hp = Math.min(PL.maxHp, PL.hp + 9 * dt);
+  if (PL.regenT <= 0 && PL.hp < PL.maxHp && PL.alive) PL.hp = Math.min(PL.maxHp, PL.hp + 18 * dt);
   // cover estimate (stress model)
   hashQuery(PL.pos.x - 1.6, PL.pos.z - 1.6, PL.pos.x + 1.6, PL.pos.z + 1.6, _pq);
   PL.inCover = _pq.some(o => o.type === 'box' && o.y + o.hy > PL.pos.y + 0.7 && o.cover) && PL.stance !== 'stand' ? 1 : PL.indoor ? 0.6 : 0;
@@ -2600,6 +2612,7 @@ function updatePlayer(dt) {
   if (PL.overheat && PL.barrel < 0.3) PL.overheat = false;
   PL.fovKick *= Math.exp(-dt * 6);
 }
+function adsZoom(w) { const st = PL.W[w.index]; return w.opticZoom && st && st.att.optic ? w.opticZoom : w.zoom; }
 function insideRoad() { return distToRoadsFast(PL.pos.x, PL.pos.z) < 3.5; }
 
 // ---------------- weapon handling ----------------
@@ -2618,7 +2631,7 @@ function updateWeapon(dt, w, st) {
   }
   if (PL.drawT > 0) PL.drawT -= dt;
   if (actP('firemode') && w.modes.length > 1) { st.mode = (st.mode + 1) % w.modes.length; AU.click(2500, 0.03, 0.2); }
-  const adsWant = IN.rmb && !PL.sprint && PL.drawT <= 0 && (!PL.reloading || w.shellReload);
+  const adsWant = IN.rmb && PL.drawT <= 0 && (!PL.reloading || w.shellReload);
   PL.ads += ((adsWant ? 1 : 0) - PL.ads) * (1 - Math.exp(-dt / Math.max(0.05, w.adsTime) * 2.6));
   // reload
   if (actP('reload') && !PL.reloading && st.mag < st.magSize && st.reserve > 0) startReload(w, st);
@@ -2638,7 +2651,7 @@ function updateWeapon(dt, w, st) {
   const auto = w.modes[st.mode] === 'AUTO';
   const want = auto ? IN.lmb : IN.lmbPressed;
   if (!IN.lmb && PL.fireT < -0.12) st.shot = 0;
-  if (want && PL.fireT <= 0 && PL.pumpT <= 0 && PL.drawT <= 0 && !PL.reloading && PL.sprintF < 0.35) {
+  if (want && PL.fireT <= 0 && PL.pumpT <= 0 && PL.drawT <= 0 && !PL.reloading) {
     if (PL.overheat) { if (IN.lmbPressed) AU.click(500, 0.1, 0.2); }
     else if (st.mag <= 0) { if (IN.lmbPressed) { AU.click(2600, 0.02, 0.3); if (st.reserve > 0) startReload(w, st); else if (PL.W[5].owned) switchWeapon(5); } }
     else fireWeapon(w, st);
@@ -3660,7 +3673,7 @@ function blastEntities(pos, D0, R, team, opt, dmgAt) {
 function damagePlayer(dmg, fromPos, owner, kind) {
   if (!PL.alive || GAME.godmode) return;
   dmg *= RUN.up.armor || 1;
-  PL.hp -= dmg; PL.regenT = 5;
+  PL.hp -= dmg; PL.regenT = 3.5;
   RUN.stats.dmgTaken += dmg;
   DIRECTOR.event(dmg / 22);
   if (owner && owner.squad) { owner.squad.dmgToPlayer += dmg; PL.lastHitBy = owner; }
@@ -4150,7 +4163,7 @@ function exitDrone() {
 function buildBar() {
   $('buildbar').innerHTML = DEF_ORDER.map(t => {
     const d = DEFTYPES[t], av = defAvailable(t);
-    return `<div class="${t === DEF.sel ? 'sel' : ''} ${av ? '' : 'lock'}"><b>${d.key} · ${d.name}</b>${av ? defCost(t) + ' salvage' : 'LOCKED'}</div>`;
+    return `<div class="${t === DEF.sel ? 'sel' : ''} ${av ? '' : 'lock'}"><b>${d.name}</b>${av ? defCost(t) + ' salvage' : 'LOCKED'}</div>`;
   }).join('');
 }
 function updateDrone(rdt) {
@@ -4167,7 +4180,7 @@ function updateDrone(rdt) {
   for (const t of DEF_ORDER) if (IN.pressed.has('Digit' + DEFTYPES[t].key)) { DEF.sel = t; buildBar(); AU.click(2200, 0.03, 0.2); }
   if (act('leanL')) DEF.rot -= rdt * 2.2; if (act('leanR')) DEF.rot += rdt * 2.2;
   if (actP('reload')) DEF.rot += Math.PI / 2;
-  if (IN.wheel) DEF.rot += IN.wheel * 0.26;
+  if (IN.wheel) { const av = DEF_ORDER.filter(defAvailable); const i = av.indexOf(DEF.sel); DEF.sel = av[((i < 0 ? 0 : i) + (IN.wheel > 0 ? 1 : av.length - 1)) % av.length]; buildBar(); AU.click(2200, 0.03, 0.2); }
   $('dronecur').style.left = ((DRONE.cursor.x + 1) / 2 * innerWidth) + 'px'; $('dronecur').style.top = ((1 - DRONE.cursor.y) / 2 * innerHeight) + 'px';
   $('dAlt').textContent = Math.round(DRONE.pos.y - heightAt(DRONE.pos.x, DRONE.pos.z)); $('dBat').textContent = Math.round(RUN.droneBattery * 100);
   // ray through cursor onto the terrain
@@ -4187,7 +4200,7 @@ function updateDrone(rdt) {
     for (const c of DEF.ghost.children) if (c.userData.ring) c.rotation.z = -DEF.rot;
     const why = canPlace(DEF.sel, hit.x, hit.z, DEF.rot);
     DEF.ghost.material.color.set(why ? 0xff5040 : 0x60ff80);
-    $('buildinfo').textContent = why ? why : `${DEFTYPES[DEF.sel].name} — ${defCost(DEF.sel)} salvage · click to place · Q/E or wheel to rotate`;
+    $('buildinfo').textContent = why ? why : `${DEFTYPES[DEF.sel].name} — ${defCost(DEF.sel)} salvage · click to place · Q/E rotate · scroll or hold ${keyName(S.keys.wheel)} to change`;
     if (IN.lmbPressed && !why) { placeDefense(DEF.sel, hit.x, hit.z, DEF.rot); buildBar(); if (GAME.tut) tutorialEvent('placed'); }
   } else { DEF.ghost.visible = false; $('buildinfo').textContent = ''; }
   // spotting: the drone camera marks enemies in view for a while
@@ -4650,11 +4663,11 @@ function updateHUD(rdt) {
   $('todTxt').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`; $('wxTxt').textContent = WX[WEATHER.state].toUpperCase() + ` · RECOVERY ${Math.round(REC.global * 100)}%`;
   const reload = PL.reloading ? ' <small style="color:var(--amber)">RELOADING</small>' : '';
   $('ammo').innerHTML = (w.id === 'gl' || w.pellets > 1 || true ? st.mag : st.mag) + `<small> / ${st.reserve}</small>` + reload;
-  const att = [st.att.optic && ATTACH.optic.for.includes(w.id) ? 'RDS' : '', st.att.supp && ATTACH.supp.for.includes(w.id) ? 'SUPP' : '', st.att.ammo !== 'FMJ' && ATTACH.ammo.for.includes(w.id) ? st.att.ammo : ''].filter(Boolean).join(' ');
+  const att = [st.att.optic && ATTACH.optic.for.includes(w.id) ? (w.opticZoom ? 'SCOPE ' + w.opticZoom + '×' : 'RED DOT') : '', st.att.supp && ATTACH.supp.for.includes(w.id) ? 'SUPP' : '', st.att.ammo !== 'FMJ' && ATTACH.ammo.for.includes(w.id) ? st.att.ammo : ''].filter(Boolean).join(' ');
   $('wname').textContent = `${w.name} · ${w.modes[st.mode]}${att ? ' · ' + att : ''}`;
   const hb = $('heatbar'); hb.style.display = w.barrel ? 'block' : 'none'; if (w.barrel) hb.firstChild.style.width = Math.min(100, PL.barrel * 100) + '%';
   $('gren').textContent = `GRENADES ${PL.grenades}`;
-  $('lowhp').style.opacity = clamp(1 - PL.hp / 45, 0, 0.85);
+  $('lowhp').style.opacity = clamp(1 - PL.hp / (PL.maxHp * 0.3), 0, 0.85);
   const cmb = $('combo'); if (RUN.combo > 0 && GAME.time - RUN.comboT < 4) { cmb.style.opacity = 1; cmb.textContent = `COMBO ×${comboMult().toFixed(2)}`; } else cmb.style.opacity = 0;
   // crosshair reflects current spread
   const sp = (PL.ads > 0.6 ? w.spread.ads : w.spread.base) + w.spread.move * PL.speed / 4.3 + w.spread.heat * PL.heat + (PL.onGround ? 0 : w.spread.air) + (w.pelletSigma || 0);
@@ -4708,10 +4721,10 @@ function updateInteract(dt) {
 const TUT_STEPS = [
   { text: () => `Move with <b>WASD</b>, look with the mouse. The control house behind you keeps the turbines running. Hold the valley.`, done: 'moved' },
   { text: () => `Press <b>${keyName(S.keys.drone)}</b> to launch the recon drone and fortify the approach.`, done: 'drone' },
-  { text: () => `Drone view: <b>1–8</b> pick a defense, <b>click</b> to place, <b>Q/E</b> to rotate, <b>WASD</b> to fly. Time runs at quarter speed up here.`, done: 'placed', timeout: 35 },
+  { text: () => `Drone view: hold <b>${keyName(S.keys.wheel)}</b> (or scroll) to pick a defense, <b>click</b> to place, <b>Q/E</b> to rotate, <b>WASD</b> to fly. Time runs at quarter speed up here.`, done: 'placed', timeout: 35 },
   { text: () => `<b>${keyName(S.keys.drone)}</b> returns to first person. Press <b>ENTER</b> when you're ready for the first wave.`, done: 'wave' },
   { text: () => `Left click fires, right click aims. <b>B</b> toggles semi/auto. Short bursts stay accurate: heat builds spread.`, done: 'fire', timeout: 14 },
-  { text: () => `<b>R</b> reloads. Swapping to the pistol (<b>6</b>) is faster than reloading.`, done: 'reload', timeout: 18 },
+  { text: () => `<b>R</b> reloads. Hold <b>${keyName(S.keys.wheel)}</b> for the weapon wheel: swapping to the pistol is faster than reloading.`, done: 'reload', timeout: 18 },
   { text: () => `When a defense is damaged, stand next to it and hold <b>F</b> to repair it.`, done: 'repaired', timeout: 16, wait: 'defdamaged' }
 ];
 function tutorialEvent(ev) {
@@ -4763,7 +4776,7 @@ function updateCamera(rdt) {
       _cp.addScaledVector(_v1, Math.max(0.15, f - 0.08));
     }
     fov = fovBase + 7 * PL.sprintF + PL.fovKick;
-    fov = fov / lerp(1, w.zoom, PL.ads);
+    fov = fov / lerp(1, adsZoom(w), PL.ads);
     if (CAM.trans > 0) { CAM.trans -= rdt; const k = 1 - clamp(CAM.trans / 0.5, 0, 1); _cp.lerpVectors(CAM.from, _cp, k * k * (3 - 2 * k)); _cq.slerpQuaternions(CAM.fromQ, _cq, k); }
     camera.position.copy(_cp); camera.quaternion.copy(_cq);
   } else if (CAM.mode === 'drone') {
@@ -4861,6 +4874,72 @@ function updateViewmodel(rdt) {
 }
 
 // =====================================================================
+//  WEAPON / BUILD WHEEL (hold Tab, move the mouse, release to equip)
+// =====================================================================
+const WHEEL = { open: false, mode: 'weapon', items: [], sel: -1, vx: 0, vy: 0 };
+function wheelItems(mode) {
+  if (mode === 'build') return DEF_ORDER.map(t => ({ id: t, name: DEFTYPES[t].name, sub: defAvailable(t) ? defCost(t) + ' salvage' : 'locked', ok: defAvailable(t), cur: DEF.sel === t }));
+  return WEAPONS.map((w, i) => ({ id: i, name: w.name, sub: PL.W[i].owned ? `${PL.W[i].mag} / ${PL.W[i].reserve}` : 'not found yet', ok: PL.W[i].owned, cur: PL.cur === i, cal: w.cal }));
+}
+function openWheel(mode) {
+  WHEEL.open = true; WHEEL.mode = mode; WHEEL.items = wheelItems(mode); WHEEL.vx = WHEEL.vy = 0;
+  WHEEL.sel = WHEEL.items.findIndex(it => it.cur);
+  $('wheel').classList.remove('hidden'); AU.click(1200, 0.04, 0.15); drawWheel();
+}
+function closeWheel(apply) {
+  WHEEL.open = false; $('wheel').classList.add('hidden');
+  const it = WHEEL.items[WHEEL.sel];
+  if (!apply || !it || !it.ok) return;
+  if (WHEEL.mode === 'build') { DEF.sel = it.id; buildBar(); AU.click(2200, 0.03, 0.2); }
+  else switchWeapon(it.id);
+}
+function updateWheel() {
+  const can = GAME.state === 'playing' && !GAME.modal && PL.alive && CAM.mode !== 'bulletcam' && CAM.mode !== 'replay';
+  const held = can && act('wheel');
+  if (held && !WHEEL.open) openWheel(CAM.mode === 'drone' ? 'build' : 'weapon');
+  if (!WHEEL.open) return;
+  if (!held) { closeWheel(true); return; }
+  WHEEL.vx = clamp(WHEEL.vx + IN.mdx, -140, 140); WHEEL.vy = clamp(WHEEL.vy + IN.mdy, -140, 140);
+  const L = Math.hypot(WHEEL.vx, WHEEL.vy), n = WHEEL.items.length;
+  if (L > 140) { WHEEL.vx *= 140 / L; WHEEL.vy *= 140 / L; }
+  if (L > 22) {
+    const a = Math.atan2(WHEEL.vy, WHEEL.vx) + Math.PI / 2;
+    const s = ((Math.round(a / (TAU / n)) % n) + n) % n;
+    if (s !== WHEEL.sel) { WHEEL.sel = s; AU.click(2600, 0.015, 0.08); }
+  }
+  // the wheel owns the mouse while open
+  IN.mdx = IN.mdy = 0;
+  if (IN.lmbPressed) { closeWheel(true); IN.lmbPressed = false; IN.lmb = false; return; }
+  drawWheel();
+}
+function drawWheel() {
+  const c = $('wheelC'), g = c.getContext('2d'), W = c.width, cx = W / 2, R1 = W * 0.47, R0 = W * 0.2, n = WHEEL.items.length, step = TAU / n;
+  g.clearRect(0, 0, W, W);
+  WHEEL.items.forEach((it, i) => {
+    const a0 = -Math.PI / 2 + (i - 0.5) * step + 0.012, a1 = a0 + step - 0.024, sel = i === WHEEL.sel;
+    g.beginPath(); g.arc(cx, cx, sel ? R1 + 14 : R1, a0, a1); g.arc(cx, cx, R0, a1, a0, true); g.closePath();
+    g.fillStyle = sel ? 'rgba(168,116,44,.88)' : it.cur ? 'rgba(60,52,40,.85)' : 'rgba(22,20,17,.78)'; g.fill();
+    g.lineWidth = 3; g.strokeStyle = sel ? 'rgba(255,215,150,.9)' : 'rgba(236,230,220,.18)'; g.stroke();
+    const am = -Math.PI / 2 + i * step, tr = (R0 + R1) / 2 + (sel ? 7 : 0);
+    const tx = cx + Math.cos(am) * tr, ty = cx + Math.sin(am) * tr;
+    g.textAlign = 'center'; g.fillStyle = it.ok ? '#ece6dc' : 'rgba(236,230,220,.35)';
+    g.font = '700 30px "Segoe UI",system-ui,sans-serif';
+    const words = it.name.split(' '); const lines = words.length > 2 ? [words.slice(0, 2).join(' '), words.slice(2).join(' ')] : words.length === 2 && it.name.length > 13 ? words : [it.name];
+    lines.forEach((ln, k) => g.fillText(ln, tx, ty - 8 + (k - (lines.length - 1) / 2) * 34));
+    g.font = '24px ui-monospace,Menlo,monospace'; g.fillStyle = it.ok ? 'rgba(232,163,60,.95)' : 'rgba(236,230,220,.3)';
+    g.fillText(it.sub, tx, ty + 34 + (lines.length - 1) * 17);
+  });
+  // centre: selection details
+  g.beginPath(); g.arc(cx, cx, R0 - 10, 0, TAU); g.fillStyle = 'rgba(12,11,9,.85)'; g.fill();
+  const it = WHEEL.items[WHEEL.sel];
+  g.textAlign = 'center'; g.fillStyle = '#ece6dc'; g.font = '700 30px "Segoe UI",system-ui,sans-serif';
+  g.fillText(it ? it.name : (WHEEL.mode === 'build' ? 'BUILD' : 'WEAPONS'), cx, cx - 6);
+  g.font = '22px ui-monospace,Menlo,monospace'; g.fillStyle = 'rgba(236,230,220,.6)';
+  g.fillText(it ? (it.cal || it.sub) : 'move the mouse', cx, cx + 28);
+  g.fillText('release ' + keyName(S.keys.wheel).toUpperCase() + ' to select', cx, cx + 58);
+}
+
+// =====================================================================
 //  GAME FLOW
 // =====================================================================
 function newRunState(seed, daily) {
@@ -4892,7 +4971,7 @@ async function startRun(seed, daily) {
   buildMapImage();
   // player
   resetPlayerWeapons();
-  Object.assign(PL, { hp: 100, maxHp: 100, alive: true, stance: 'stand', eye: 1.65, lean: 0, slideT: 0, ads: 0, heat: 0, barrel: 0, overheat: false, reloading: false, switchT: 0, switchTo: -1, drawT: 0, grenades: 3, fireT: 0, pumpT: 0, killer: null, lastHitBy: null, fovKick: 0 });
+  Object.assign(PL, { hp: 250, maxHp: 250, alive: true, stance: 'stand', eye: 1.65, lean: 0, slideT: 0, ads: 0, heat: 0, barrel: 0, overheat: false, reloading: false, switchT: 0, switchTo: -1, drawT: 0, grenades: 3, fireT: 0, pumpT: 0, killer: null, lastHitBy: null, fovKick: 0 });
   PL.rec.p = PL.rec.y = PL.rec.vp = PL.rec.vy = 0;
   PL.pos.set(WORLD.pad.x, WORLD.pad.y, WORLD.pad.z - 14); PL.vel.set(0, 0, 0);
   PL.yaw = Math.atan2(-(WORLD.spawns[0] ? WORLD.spawns[0].x - PL.pos.x : 0), -(WORLD.spawns[0] ? WORLD.spawns[0].z - PL.pos.z : -1)); PL.pitch = 0;
@@ -5075,6 +5154,7 @@ function frame(now) {
   else if (CAM.mode === 'replay') ts = 0.3;
   else if (CAM.mode === 'drone') ts = 0.25;
   else if (GAME.slowT > 0) { GAME.slowT -= rdt; ts = Math.min(ts, 0.35); }
+  if (WHEEL.open) ts = Math.min(ts, 0.3);
   if (GAME.state === 'dead') ts = 0.6;
   GAME.timeScale = ts;
   simulate(rdt, ts, playing);
@@ -5089,6 +5169,7 @@ function frame(now) {
 function simulate(rdt, ts, playing) {
   const dt = playing ? rdt * ts : 0;
   if (playing) {
+    updateWheel();
     GAME.time += dt;
     BCAM.cooldown -= dt;
     if (GAME.state === 'playing' && !GAME.modal) {
